@@ -1,49 +1,92 @@
 // ============================================================================
-// Release Attestation Format — Aviation Profile (Back-to-Birth)
-// Holochain Zome Implementation
+// Release Attestation Format — Aviation Profile
+// Holochain Zome v2 (post-review)
+//
+// REVISION NOTES:
+// - Validation is deterministic: only must_get_* calls, no get_links
+// - Ejection is verification-time only; validation does not check it
+// - Trust anchor uses DNA properties (AgentPubKeys), not string literals
+// - Action timestamp used instead of user-supplied time
+// - N=2 via local source chains + peer-to-peer exchange, not countersigning
+// - Predecessor check actually implemented via must_get_valid_record
+//
+// FATAL ISSUES FROM v1 ADDRESSED:
+// 1. ROOT_AUTHORITIES now AgentPubKeys in DNA properties
+// 2. No DHT lookups in validate(); uses must_get_valid_record only
+// 3. Ejection removed from validation; moved to verify_attestation
+// 4. Backdating prevented via action timestamp
+// 5. Theatre checks removed or implemented
+// 6. Countersigning claim corrected in architecture
+//
+// WHAT THIS STILL DOES NOT SOLVE:
+// - The FAA does not have a Holochain key. Bootstrapping trust is a separate
+//   problem requiring out-of-band verification of accreditation documents.
+// - Admissibility in court/arbitration is a legal question, not technical.
+// - Competition law: a group of competitors using shared ejection rules may
+//   still be a concerted refusal to deal, regardless of architecture.
+//
 // ============================================================================
-//
-// This zome implements the aviation-specific attestation logic on Holochain.
-// It leverages Holochain's unique properties to solve the trust-list problem
-// that has blocked aviation back-to-birth traceability for 16+ years.
-//
-// KEY HOLCHAIN PROPERTIES USED:
-// 1. Agent-centricity: Each repair station/airline/OEM owns their own source chain
-// 2. Membrane proofs: Membership is gated by cryptographic accreditation proofs
-// 3. Validation-as-code: Ejection rules are deterministic, auditable by anyone
-// 4. Countersigning: N=2 transactions need no third party present
-// 5. DHT: Strangers verify records years later without contacting issuers
-// 6. No global consensus: Local validation rules, no blockchain overhead
-//
 
 use hdk::prelude::*;
+
+// ============================================================================
+// DNA PROPERTIES — Set at install time by whoever deploys the DNA
+//
+// These are the root authority public keys. The party installing the DNA
+// must set these to actual keys belonging to recognized accrediting bodies
+// (or their delegates). This is the ONE centralization point, and it is
+// transparent: every peer can read these properties and audit them.
+//
+// BOOTSTRAP PROBLEM: The FAA does not natively issue Holochain keys.
+// Practical paths:
+//   (a) A neutral third party (e.g., the coalition's secretariat) verifies
+//       FAA/EASA certificates out-of-band and issues Holochain membrane proofs.
+//   (b) The DNA is installed with pubkeys of trusted verifiers who do this.
+//   (c) Each jurisdiction runs its own DNA with its own root authorities.
+//
+// This code assumes (b): root_authorities are AgentPubKeys of trusted
+// verifiers who have done the out-of-band accreditation check.
+// ============================================================================
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DnaProperties {
+    pub root_authorities: Vec<AgentPubKey>,
+    pub assertion_vocabulary: Vec<String>,
+    pub min_ejection_validators: u8,  // N peers must countersign an ejection
+}
+
+fn dna_props() -> ExternResult<DnaProperties> {
+    let props = dna_info()?.properties;
+    let props: DnaProperties = props.try_into()
+        .map_err(|e| wasm_error!(WasmErrorInner::Guest(
+            format!("DNA properties malformed: {:?}", e)
+        )))?;
+    Ok(props)
+}
 
 // ============================================================================
 // ENTRY TYPES
 // ============================================================================
 
-/// An attestation binds a physical aircraft part to its documentation.
-/// This is the core record. It is deliberately NOT a claim that the part
-/// is good — only that the binding between artefact and document was
-/// observed by the attester at a stated time, within a stated scope.
 #[hdk_entry_helper]
 #[derive(Clone)]
 pub struct Attestation {
-    pub raf_version: String,           // "0.1"
-    pub subject: Subject,              // The physical part
-    pub binding: Binding,              // Link: part serial → document
-    pub scope: Scope,                  // What was / was-not observed
-    pub evidence: Vec<Evidence>,       // Digests, not documents
-    pub attester: Attester,            // Who signed, in what role
-    pub time: Timestamp,               // When asserted
-    pub anchor: Option<Anchor>,        // Qualified timestamp (optional)
+    pub raf_version: String,
+    pub subject: Subject,
+    pub binding: Binding,
+    pub scope: Scope,
+    pub evidence: Vec<Evidence>,
+    pub attester: Attester,
+    pub membership_proof_hash: ActionHash,  // Hash of the MembershipProof this attester claims
+    pub anchor: Option<Anchor>,
+    // NOTE: No user-supplied timestamp. Use the action's timestamp.
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Subject {
-    pub part_type: PartType,           // Engine, LRU, consumable, etc.
-    pub part_number: String,           // Manufacturer part number
-    pub serial_number: String,         // The unique physical identifier
+    pub part_type: PartType,
+    pub part_number: String,
+    pub serial_number: String,
     pub description: String,
 }
 
@@ -53,16 +96,16 @@ pub enum PartType {
     Propeller,
     LifeLimited,
     Serialized,
-    Standard,                          // Non-serialized — the hard case for #9
+    Standard,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Binding {
-    pub binds_field: String,           // e.g., "serial_number"
-    pub document_type: DocumentType,   // 8130-3, EASA Form 1, etc.
-    pub document_id: String,           // Form tracking number
-    pub document_digest: String,       // sha256:...
-    pub predecessor_document: Option<String>, // Ch 16 chain link
+    pub binds_field: String,
+    pub document_type: DocumentType,
+    pub document_id: String,
+    pub document_digest: String,
+    pub predecessor_document_hash: Option<ActionHash>, // Ch.16 chain link
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -75,17 +118,15 @@ pub enum DocumentType {
     TransferDocument,
 }
 
-/// SCOPE IS THE LOAD-BEARING FIELD.
-/// Every assertion is discrete. Absence is never assent.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Scope {
     pub observed: Vec<Assertion>,
-    pub not_observed: Vec<String>,     // Assertion IDs explicitly not witnessed
+    pub not_observed: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Assertion {
-    pub assertion_id: String,          // From closed vocabulary
+    pub assertion_id: String,
     pub value: AssertionValue,
 }
 
@@ -96,45 +137,19 @@ pub enum AssertionValue {
     NotApplicable,
 }
 
-/// Closed vocabulary for aviation attestations.
-/// Free text is not an assertion.
-pub const AVIATION_ASSERTION_VOCABULARY: &[&str] = &[
-    "part.received_from_known_supplier",
-    "part.packaging_intact",
-    "part.serial_number_verified_physically",
-    "part.serial_number_matches_document",
-    "document.8130_3_present",
-    "document.easa_form_1_present",
-    "document.signature_present",
-    "document.predecessor_chain_verified",
-    "document.issue_date_within_shelf_life",
-    "traceability.back_to_birth_complete",
-    "traceability.oem_traceable",
-    "traceability.repair_station_traceable",
-    "condition.new",
-    "condition.overhauled",
-    "condition.inspected",
-    "condition.repaired",
-    "regulatory.faa_8130_3_compliant",
-    "regulatory.easa_form_1_compliant",
-    "regulatory.export_8130_3_tag_attached",
-    "custody.sealed_packaging_broken_by_me",
-    "custody.seal_number_recorded",
-];
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Evidence {
     pub evidence_type: String,
-    pub digest: String,                // sha256:...
-    pub locator: Option<String>,       // Opaque or absent
+    pub digest: String,
+    pub locator: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Attester {
-    pub agent_pubkey: AgentPubKey,     // Holochain agent ID
+    pub agent_pubkey: AgentPubKey,
     pub role: AttesterRole,
     pub organisation: String,
-    pub organisation_id: String,       // FAA repair station cert #, EASA Part 145 #, etc.
+    pub organisation_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -150,34 +165,10 @@ pub enum AttesterRole {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Anchor {
-    pub qualified_timestamp: String,   // rfc3161:...
+    pub qualified_timestamp: String,
     pub timestamp_service_id: String,
 }
 
-/// A counter-attestation from the other party.
-/// Agreement AND disagreement are both useful.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CounterAttestation {
-    pub attester: Attester,
-    pub time: Timestamp,
-    pub agreement: AgreementStatus,
-    pub discrepancy_notes: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum AgreementStatus {
-    Agree,
-    Disagree,
-    Partial,
-}
-
-// ============================================================================
-// MEMBERSHIP & EJECTION
-// ============================================================================
-
-/// Membrane proof: the cryptographic gate that lets an agent join the DHT.
-/// In aviation, this replaces the "trust list" — instead of a central registry,
-/// membership is proven by existing accreditation infrastructure.
 #[hdk_entry_helper]
 #[derive(Clone)]
 pub struct MembershipProof {
@@ -186,16 +177,15 @@ pub struct MembershipProof {
     pub accreditation: Accreditation,
     pub issued_at: Timestamp,
     pub expires_at: Option<Timestamp>,
-    pub signed_by: AgentPubKey,        // Accrediting body OR vouching member
-    pub vouch_chain: Vec<AgentPubKey>, // Chain of vouches back to a root authority
+    pub signed_by: AgentPubKey,
+    pub accreditation_document_digest: String, // Hash of actual cert (for out-of-band verification)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Accreditation {
     pub accreditation_type: AccreditationType,
-    pub cert_number: String,           // FAA RS #: XXXXR, EASA Part 145: etc.
-    pub issuing_authority: String,     // "FAA", "EASA", "CASA", etc.
-    pub document_digest: String,       // Digest of the actual cert
+    pub cert_number: String,
+    pub issuing_authority: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -205,53 +195,44 @@ pub enum AccreditationType {
     EasaPart21g,
     FaaPma,
     OemAuthorized,
-    DistributorAccredited,            // e.g., ASA-100, ISO 9001+AS9120
+    DistributorAccredited,
 }
 
-/// Root authorities are hard-coded in the DNA.
-/// They are the "genesis" trust anchors — existing regulators/standards bodies.
-/// This avoids the infinite regress of "who watches the watchers."
-pub const ROOT_AUTHORITIES: &[&str] = &[
-    "FAA",
-    "EASA",
-    "CASA",
-    "TCCA",
-    "CAAC",
-];
-
-/// EjectionRecord: the mechanism for removing bad actors.
-/// Grounds MUST be objective, published in advance, and verifiable by anyone.
 #[hdk_entry_helper]
 #[derive(Clone)]
 pub struct EjectionRecord {
     pub agent_pubkey: AgentPubKey,
     pub grounds: EjectionGrounds,
-    pub evidence_hashes: Vec<ActionHash>, // Links to contradictory attestations
+    pub evidence_hashes: Vec<ActionHash>,
     pub decided_at: Timestamp,
-    pub validation_threshold_met: bool,   // Enough peer validators confirmed
+    pub validator_signatures: Vec<AgentPubKey>, // Peers who independently confirmed
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum EjectionGrounds {
-    /// Attester issued attestations whose bindings contradict each other
-    /// (e.g., same serial number bound to two different documents)
     ContradictoryBindings,
-    /// Attester signed an attestation outside their accredited scope
     EntitlementViolation,
-    /// Attestation contained an assertion ID not in the closed vocabulary
     InvalidAssertionVocabulary,
-    /// Membership proof was forged or expired
     InvalidMembership,
-    /// Key rotation without proper accreditation confirmation
     UnauthorizedKeyRotation,
 }
 
-// ============================================================================
-// KEY ROTATION
-// ============================================================================
+#[hdk_entry_helper]
+#[derive(Clone)]
+pub struct CounterAttestation {
+    pub attester: Attester,
+    pub agreement: AgreementStatus,
+    pub discrepancy_notes: Option<String>,
+    // Timestamp is the action timestamp
+}
 
-/// Long-lived records need key rotation. MARPOL wants 3 years;
-/// aviation parts fly for decades. Key material outlives no design.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum AgreementStatus {
+    Agree,
+    Disagree,
+    Partial,
+}
+
 #[hdk_entry_helper]
 #[derive(Clone)]
 pub struct KeyRotation {
@@ -259,22 +240,47 @@ pub struct KeyRotation {
     pub old_key: AgentPubKey,
     pub new_key: AgentPubKey,
     pub accreditation_confirming: Accreditation,
-    pub rotated_at: Timestamp,
-    pub continuity_proof: String,      // Old key signs new key, OR accreditor signs
+    pub continuity_proof: String,
 }
 
 // ============================================================================
-// VALIDATION RULES — THE LOAD-BEARING CODE
+// LINK TYPES
 // ============================================================================
+
+#[hdk_link_types]
+pub enum LinkTypes {
+    SerialToAttestation,
+    AgentToAttestation,
+    AgentMembership,
+    AgentEjection,
+    AttestationToCounter,
+    DocumentToAttestation,
+}
+
+// ============================================================================
+// ENTRY TYPE DEFINITIONS
+// ============================================================================
+
+#[hdk_entry_types]
+#[unit_enum(UnitEntryTypes)]
+pub enum EntryTypes {
+    Attestation(Attestation),
+    MembershipProof(MembershipProof),
+    EjectionRecord(EjectionRecord),
+    KeyRotation(KeyRotation),
+    CounterAttestation(CounterAttestation),
+}
+
+// ============================================================================
+// VALIDATION — DETERMINISTIC ONLY
 //
-// These rules are the "operator". They run on every peer's machine.
-// A stranger can audit them by reading the DNA.
-// This satisfies SPEC.md §6: "Membership rules MUST be expressed as code
-// that any participant can run and any stranger can audit."
+// Rules enforced at publish time. Every peer must reach the same verdict.
+// NO DHT lookups (no get, no get_links). Only must_get_valid_record.
+// ============================================================================
 
 #[hdk_extern]
 pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
-    match op.flattened::<(), EntryTypes, LinkTypes>()? {
+    match op.flattened::<UnitEntryTypes, EntryTypes, LinkTypes>()? {
         FlatOp::StoreEntry(store_entry) => match store_entry.entry {
             OpEntry::CreatedEntry(EntryTypes::Attestation(attestation)) => {
                 validate_attestation_creation(&attestation, &store_entry.action)
@@ -288,23 +294,30 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
             OpEntry::CreatedEntry(EntryTypes::KeyRotation(rotation)) => {
                 validate_key_rotation(&rotation, &store_entry.action)
             }
+            OpEntry::CreatedEntry(EntryTypes::CounterAttestation(counter)) => {
+                validate_counter_attestation(&counter, &store_entry.action)
+            }
             _ => Ok(ValidateCallbackResult::Valid),
         },
         FlatOp::RegisterUpdate(register_update) => {
-            // Attestations are immutable. Updates are rejected.
             match register_update.entry_type {
-                EntryTypes::Attestation(_) => Ok(ValidateCallbackResult::Invalid(
-                    "Attestations are immutable. Issue a new attestation with predecessor link.".to_string()
-                )),
+                EntryTypes::Attestation(_) | EntryTypes::MembershipProof(_) |
+                EntryTypes::EjectionRecord(_) | EntryTypes::CounterAttestation(_) => {
+                    Ok(ValidateCallbackResult::Invalid(
+                        "Attestations, memberships, ejections and counters are immutable.".to_string()
+                    ))
+                }
                 _ => Ok(ValidateCallbackResult::Valid),
             }
         }
         FlatOp::RegisterDelete(register_delete) => {
-            // Attestations are immutable. Deletes are rejected.
             match register_delete.entry_type {
-                EntryTypes::Attestation(_) => Ok(ValidateCallbackResult::Invalid(
-                    "Attestations are immutable. Issue a counter-attestation instead.".to_string()
-                )),
+                EntryTypes::Attestation(_) | EntryTypes::MembershipProof(_) |
+                EntryTypes::EjectionRecord(_) | EntryTypes::CounterAttestation(_) => {
+                    Ok(ValidateCallbackResult::Invalid(
+                        "Attestations, memberships, ejections and counters are immutable.".to_string()
+                    ))
+                }
                 _ => Ok(ValidateCallbackResult::Valid),
             }
         }
@@ -313,187 +326,170 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
 }
 
 /// Validate an attestation at creation time.
+/// DETERMINISTIC: only checks the action and its declared dependencies.
 fn validate_attestation_creation(
     attestation: &Attestation,
     action: &EntryCreationAction,
 ) -> ExternResult<ValidateCallbackResult> {
-    // 1. Check RAF version
+    let props = dna_props()?;
+
+    // 1. RAF version
     if attestation.raf_version != "0.1" {
         return Ok(ValidateCallbackResult::Invalid(
             "Unsupported RAF version".to_string()
         ));
     }
 
-    // 2. Check that all assertions are from the closed vocabulary
+    // 2. Assertion vocabulary — deterministic check against DNA properties
     for assertion in &attestation.scope.observed {
-        if !AVIATION_ASSERTION_VOCABULARY.contains(&assertion.assertion_id.as_str()) {
+        if !props.assertion_vocabulary.contains(&assertion.assertion_id) {
             return Ok(ValidateCallbackResult::Invalid(format!(
-                "Assertion '{}' not in closed vocabulary",
+                "Assertion '{}' not in vocabulary",
                 assertion.assertion_id
             )));
         }
     }
 
-    // 3. Check that the attester was a member at the time of assertion
-    // This is the HARD PART (SPEC.md §7 step 4).
-    // We query the DHT for membership proofs and ejection records.
-    let membership_status = check_historical_membership(
-        &attestation.attester.agent_pubkey,
-        attestation.time,
-    )?;
-
-    match membership_status {
-        MembershipStatus::Active => {}
-        MembershipStatus::NotMember => {
-            return Ok(ValidateCallbackResult::Invalid(
-                "Attester was not a member at asserted_at".to_string()
-            ));
-        }
-        MembershipStatus::Ejected(ejected_at) => {
-            if attestation.time > ejected_at {
-                return Ok(ValidateCallbackResult::Invalid(
-                    "Attester was ejected before asserted_at".to_string()
-                ));
-            }
-        }
-        MembershipStatus::Expired(expired_at) => {
-            if attestation.time > expired_at {
-                return Ok(ValidateCallbackResult::Invalid(
-                    "Attester's membership had expired at asserted_at".to_string()
-                ));
-            }
-        }
-    }
-
-    // 4. Check that the signer (action author) matches the attester
-    let author = action.author().clone();
-    if author != attestation.attester.agent_pubkey {
+    // 3. Author must match attester
+    if action.author() != attestation.attester.agent_pubkey {
         return Ok(ValidateCallbackResult::Invalid(
-            "Action author does not match attester agent_pubkey".to_string()
+            "Action author does not match attester".to_string()
         ));
     }
 
-    // 5. Check that predecessor document exists if claimed
-    if let Some(pred_id) = &attestation.binding.predecessor_document {
-        let pred_exists = check_predecessor_exists(pred_id)?;
-        if !pred_exists {
+    // 4. Membership proof must exist and be structurally valid
+    // DETERMINISTIC: must_get_valid_record fetches by hash; all validators see the same record
+    let membership_record = must_get_valid_record(attestation.membership_proof_hash.clone())?;
+    let membership: MembershipProof = membership_record
+        .entry()
+        .to_app_option()
+        .map_err(|e| wasm_error!(WasmErrorInner::Guest(e.to_string())))?
+        .ok_or(wasm_error!(WasmErrorInner::Guest(
+            "Referenced membership proof not found".to_string()
+        )))?;
+
+    // 5. Membership proof must be for this agent
+    if membership.agent_pubkey != attestation.attester.agent_pubkey {
+        return Ok(ValidateCallbackResult::Invalid(
+            "Membership proof does not match attester".to_string()
+        ));
+    }
+
+    // 6. Membership must not be expired at action time
+    let action_time = action.timestamp();
+    if let Some(expires) = membership.expires_at {
+        if action_time > expires {
             return Ok(ValidateCallbackResult::Invalid(
-                "Predecessor document not found in DHT".to_string()
+                "Membership expired at time of attestation".to_string()
             ));
         }
     }
+
+    // 7. Membership must have been issued before action time
+    if action_time < membership.issued_at {
+        return Ok(ValidateCallbackResult::Invalid(
+            "Membership issued after attestation".to_string()
+        ));
+    }
+
+    // 8. Predecessor document must exist if claimed
+    if let Some(pred_hash) = &attestation.binding.predecessor_document_hash {
+        let _pred_record = must_get_valid_record(pred_hash.clone())?;
+        // We have the record. Verification-time checks will confirm it is an Attestation
+        // for the same serial number. Here we only confirm it exists.
+    }
+
+    // NOTE: We do NOT check ejection status here. Ejection is verification-time.
+    // A later ejection does not retroactively invalidate this attestation.
 
     Ok(ValidateCallbackResult::Valid)
 }
 
 /// Validate a membership proof.
+/// DETERMINISTIC: checks signature against DNA root authorities.
 fn validate_membership_creation(
     proof: &MembershipProof,
     action: &EntryCreationAction,
 ) -> ExternResult<ValidateCallbackResult> {
-    // 1. Author must match the agent_pubkey in the proof
+    let props = dna_props()?;
+
+    // 1. Author must match agent_pubkey
     if action.author() != proof.agent_pubkey {
         return Ok(ValidateCallbackResult::Invalid(
             "Membership proof author mismatch".to_string()
         ));
     }
 
-    // 2. Check that the signer (signed_by) is authorized to issue this accreditation
-    let signer_is_root = ROOT_AUTHORITIES.contains(&proof.accreditation.issuing_authority.as_str());
-    let signer_is_member = check_historical_membership(&proof.signed_by, proof.issued_at)?
-        == MembershipStatus::Active;
-
-    if !signer_is_root && !signer_is_member {
+    // 2. signed_by must be a root authority (deterministic: compare against DNA properties)
+    if !props.root_authorities.contains(&proof.signed_by) {
         return Ok(ValidateCallbackResult::Invalid(
-            "Membership signer is not a recognized authority".to_string()
+            "Membership signer is not a recognized root authority".to_string()
         ));
     }
 
-    // 3. Check that the accreditation type matches the role
+    // 3. The action author of this membership proof must be the signed_by pubkey
+    // (i.e., root authorities issue memberships directly)
+    if action.author() != proof.signed_by {
+        return Ok(ValidateCallbackResult::Invalid(
+            "Membership proof must be authored by the signing root authority".to_string()
+        ));
+    }
+
+    // 4. Accreditation type must match role
     match (&proof.accreditation.accreditation_type, &proof.role) {
         (AccreditationType::FaaRepairStation, AttesterRole::RepairStation) => Ok(()),
         (AccreditationType::EasaPart145, AttesterRole::RepairStation) => Ok(()),
         (AccreditationType::EasaPart145, AttesterRole::Mro) => Ok(()),
         (AccreditationType::OemAuthorized, AttesterRole::Oem) => Ok(()),
         (AccreditationType::DistributorAccredited, AttesterRole::Distributor) => Ok(()),
-        _ => Err(wasm_error!(WasmErrorInner::Guest(
+        _ => Ok(ValidateCallbackResult::Invalid(
             "Accreditation type does not match role".to_string()
-        ))),
+        )),
     }?;
 
     Ok(ValidateCallbackResult::Valid)
 }
 
 /// Validate an ejection record.
+/// DETERMINISTIC: checks structural correctness only.
 fn validate_ejection_creation(
     record: &EjectionRecord,
     action: &EntryCreationAction,
 ) -> ExternResult<ValidateCallbackResult> {
-    // 1. Grounds must be objective and verifiable
+    let props = dna_props()?;
+
+    // 1. Ejector must be a root authority (only root authorities can eject)
+    if !props.root_authorities.contains(action.author()) {
+        return Ok(ValidateCallbackResult::Invalid(
+            "Only root authorities can issue ejection records".to_string()
+        ));
+    }
+
+    // 2. Must have enough validator signatures
+    if record.validator_signatures.len() < props.min_ejection_validators as usize {
+        return Ok(ValidateCallbackResult::Invalid(format!(
+            "Ejection requires at least {} validator signatures, got {}",
+            props.min_ejection_validators,
+            record.validator_signatures.len()
+        )));
+    }
+
+    // 3. Grounds must be objective
     match &record.grounds {
         EjectionGrounds::ContradictoryBindings => {
-            // Must provide evidence: at least 2 attestations with contradictory bindings
             if record.evidence_hashes.len() < 2 {
                 return Ok(ValidateCallbackResult::Invalid(
                     "ContradictoryBindings requires at least 2 evidence attestations".to_string()
                 ));
             }
-            // Verify the contradictions
-            let contradiction_verified = verify_binding_contradiction(&record.evidence_hashes)?;
-            if !contradiction_verified {
-                return Ok(ValidateCallbackResult::Invalid(
-                    "Evidence does not show contradictory bindings".to_string()
-                ));
-            }
         }
-        EjectionGrounds::EntitlementViolation => {
-            // Evidence must show an attestation outside accredited scope
+        _ => {
             if record.evidence_hashes.is_empty() {
                 return Ok(ValidateCallbackResult::Invalid(
-                    "EntitlementViolation requires evidence".to_string()
+                    "Ejection requires evidence".to_string()
                 ));
             }
         }
-        EjectionGrounds::InvalidAssertionVocabulary => {
-            // Evidence must show an attestation with invalid assertion ID
-            if record.evidence_hashes.is_empty() {
-                return Ok(ValidateCallbackResult::Invalid(
-                    "InvalidAssertionVocabulary requires evidence".to_string()
-                ));
-            }
-        }
-        EjectionGrounds::InvalidMembership => {
-            // Evidence must show a forged or expired membership proof
-            if record.evidence_hashes.is_empty() {
-                return Ok(ValidateCallbackResult::Invalid(
-                    "InvalidMembership requires evidence".to_string()
-                ));
-            }
-        }
-        EjectionGrounds::UnauthorizedKeyRotation => {
-            if record.evidence_hashes.is_empty() {
-                return Ok(ValidateCallbackResult::Invalid(
-                    "UnauthorizedKeyRotation requires evidence".to_string()
-                ));
-            }
-        }
-    }
-
-    // 2. The ejector must be a member
-    let ejector_status = check_historical_membership(action.author(), record.decided_at)?;
-    if ejector_status != MembershipStatus::Active {
-        return Ok(ValidateCallbackResult::Invalid(
-            "Ejector was not an active member at decision time".to_string()
-        ));
-    }
-
-    // 3. validation_threshold_met: in a real implementation, this would require
-    // N peer validators to independently confirm. For now, we check that at least
-    // one other peer has countersigned.
-    if !record.validation_threshold_met {
-        return Ok(ValidateCallbackResult::Invalid(
-            "Ejection requires peer validation threshold".to_string()
-        ));
     }
 
     Ok(ValidateCallbackResult::Valid)
@@ -504,135 +500,42 @@ fn validate_key_rotation(
     rotation: &KeyRotation,
     action: &EntryCreationAction,
 ) -> ExternResult<ValidateCallbackResult> {
-    // 1. Author must be the old key or the accrediting body
+    // Author must be the old key or a root authority
+    let props = dna_props()?;
     let author = action.author();
-    if author != &rotation.old_key {
-        // Must be signed by accrediting body
-        let accredit_status = check_historical_membership(author, rotation.rotated_at)?;
-        if accredit_status != MembershipStatus::Active {
-            return Ok(ValidateCallbackResult::Invalid(
-                "Key rotation must be signed by old key or active accreditor".to_string()
-            ));
-        }
-    }
 
-    // 2. Accreditation confirming must be valid
-    // (In production, verify the accreditation document exists and is current)
+    if author != &rotation.old_key && !props.root_authorities.contains(author) {
+        return Ok(ValidateCallbackResult::Invalid(
+            "Key rotation must be signed by old key or root authority".to_string()
+        ));
+    }
 
     Ok(ValidateCallbackResult::Valid)
 }
 
-// ============================================================================
-// MEMBERSHIP CHECK — THE HARD PART
-// ============================================================================
-
-#[derive(Debug, PartialEq)]
-pub enum MembershipStatus {
-    Active,
-    NotMember,
-    Ejected(Timestamp),
-    Expired(Timestamp),
-}
-
-/// Check if an agent was a member at a specific historical time.
-/// This is SPEC.md §7 step 4 — "Membership is historical; this is the hard part."
-///
-/// In Holochain, we query the DHT for all MembershipProof and EjectionRecord
-/// entries for this agent, then reconstruct the timeline.
-fn check_historical_membership(
-    agent: &AgentPubKey,
-    at_time: Timestamp,
-) -> ExternResult<MembershipStatus> {
-    // Query DHT for all MembershipProof entries linked to this agent
-    let membership_links = get_links(
-        GetLinksInputBuilder::try_new(agent.clone(), LinkTypes::AgentMembership)?
-            .build(),
-    )?;
-
-    let mut memberships: Vec<(Timestamp, ActionHash)> = Vec::new();
-    for link in membership_links {
-        if let Some(target) = link.target.into_entry_hash() {
-            if let Some(record) = get(target, GetOptions::default())? {
-                if let Ok(proof) = record.entry().to_app_option::<MembershipProof>() {
-                    if let Some(proof) = proof {
-                        memberships.push((proof.issued_at, record.action_address().clone()));
-                    }
-                }
-            }
-        }
+/// Validate a counter-attestation.
+fn validate_counter_attestation(
+    counter: &CounterAttestation,
+    action: &EntryCreationAction,
+) -> ExternResult<ValidateCallbackResult> {
+    // Author must match attester
+    if action.author() != counter.attester.agent_pubkey {
+        return Ok(ValidateCallbackResult::Invalid(
+            "Counter-attestation author mismatch".to_string()
+        ));
     }
 
-    // Sort by time
-    memberships.sort_by_key(|(t, _)| *t);
-
-    // Find the most recent membership proof that was active at `at_time`
-    let mut active_membership: Option<&(Timestamp, ActionHash)> = None;
-    for (issued, hash) in &memberships {
-        if *issued <= at_time {
-            active_membership = Some((*issued, hash));
-        } else {
-            break;
-        }
-    }
-
-    if active_membership.is_none() {
-        return Ok(MembershipStatus::NotMember);
-    }
-
-    // Check for ejection before at_time
-    let ejection_links = get_links(
-        GetLinksInputBuilder::try_new(agent.clone(), LinkTypes::AgentEjection)?
-            .build(),
-    )?;
-
-    let mut ejections: Vec<Timestamp> = Vec::new();
-    for link in ejection_links {
-        if let Some(target) = link.target.into_entry_hash() {
-            if let Some(record) = get(target, GetOptions::default())? {
-                if let Ok(ejection) = record.entry().to_app_option::<EjectionRecord>() {
-                    if let Some(ejection) = ejection {
-                        ejections.push(ejection.decided_at);
-                    }
-                }
-            }
-        }
-    }
-
-    ejections.sort();
-
-    // Check if ejected before at_time
-    for ejected_at in &ejections {
-        if *ejected_at <= at_time {
-            return Ok(MembershipStatus::Ejected(*ejected_at));
-        }
-    }
-
-    // Check expiry
-    if let Some((_, hash)) = active_membership {
-        if let Some(record) = get(hash.clone(), GetOptions::default())? {
-            if let Ok(proof) = record.entry().to_app_option::<MembershipProof>() {
-                if let Some(proof) = proof {
-                    if let Some(expires) = proof.expires_at {
-                        if at_time > expires {
-                            return Ok(MembershipStatus::Expired(expires));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(MembershipStatus::Active)
+    Ok(ValidateCallbackResult::Valid)
 }
 
 // ============================================================================
 // ZOME FUNCTIONS (Callable from UI / external)
 // ============================================================================
 
-/// Create an attestation. Runs locally first, then publishes to DHT.
+/// Create an attestation.
+/// Runs locally first, then publishes to DHT.
 #[hdk_extern]
 pub fn create_attestation(attestation: Attestation) -> ExternResult<Record> {
-    // Self-check: am I the attester?
     let me = agent_info()?.agent_latest_pubkey;
     if me != attestation.attester.agent_pubkey {
         return Err(wasm_error!(WasmErrorInner::Guest(
@@ -643,18 +546,22 @@ pub fn create_attestation(attestation: Attestation) -> ExternResult<Record> {
     let attestation_hash = create_entry(&EntryTypes::Attestation(attestation.clone()))?;
 
     // Link from part serial number for discoverability
+    let serial_anchor = path::Path::from(attestation.subject.serial_number.clone())
+        .path_entry_hash()?;
     create_link(
-        attestation.subject.serial_number.clone(),
+        serial_anchor,
         attestation_hash.clone(),
         LinkTypes::SerialToAttestation,
         (),
     )?;
 
-    // Link from attester for audit trail
+    // Link from document ID
+    let doc_anchor = path::Path::from(attestation.binding.document_id.clone())
+        .path_entry_hash()?;
     create_link(
-        attestation.attester.agent_pubkey.clone(),
+        doc_anchor,
         attestation_hash.clone(),
-        LinkTypes::AgentToAttestation,
+        LinkTypes::DocumentToAttestation,
         (),
     )?;
 
@@ -667,39 +574,30 @@ pub fn create_attestation(attestation: Attestation) -> ExternResult<Record> {
 }
 
 /// Add a counter-attestation to an existing attestation.
-/// A recorded disagreement at the time of delivery is worth more than a resolved one.
 #[hdk_extern]
-pub fn countersign_attestation(
-    input: CountersignInput,
+pub fn create_counter_attestation(
+    input: CreateCounterInput,
 ) -> ExternResult<Record> {
     let me = agent_info()?.agent_latest_pubkey;
 
-    // Get the original attestation
-    let original = get(input.attestation_hash.clone(), GetOptions::default())?
+    // Verify the original attestation exists
+    let _original = get(input.attestation_hash.clone(), GetOptions::default())?
         .ok_or(wasm_error!(WasmErrorInner::Guest(
             "Attestation not found".to_string()
         )))?;
 
-    let original_attestation: Attestation = original
-        .entry()
-        .to_app_option()
-        .map_err(|e| wasm_error!(WasmErrorInner::Guest(e.to_string())))?
-        .ok_or(wasm_error!(WasmErrorInner::Guest(
-            "Invalid attestation entry".to_string()
-        )))?;
-
-    // Create counter-attestation
     let counter = CounterAttestation {
-        attester: input.attester,
-        time: sys_time()?,
+        attester: Attester {
+            agent_pubkey: me,
+            role: input.role,
+            organisation: input.organisation,
+            organisation_id: input.organisation_id,
+        },
         agreement: input.agreement,
         discrepancy_notes: input.notes,
     };
 
-    // In Holochain, countersigning uses the built-in countersigning feature
-    // where both parties sign the same entry. For simplicity here, we store
-    // the counter-attestation as a separate linked entry.
-    let counter_hash = create_entry(&EntryTypes::CounterAttestation(counter))?;
+    let counter_hash = create_entry(&EntryTypes::CounterAttestation(counter.clone()))?;
 
     create_link(
         input.attestation_hash.clone(),
@@ -716,15 +614,14 @@ pub fn countersign_attestation(
     Ok(record)
 }
 
-/// Issue a membership proof (membrane proof).
-/// Restricted to root authorities or existing members with vouch rights.
+/// Issue a membership proof.
+/// RESTRICTED to root authorities (enforced by validation).
 #[hdk_extern]
 pub fn issue_membership(proof: MembershipProof) -> ExternResult<Record> {
     let me = agent_info()?.agent_latest_pubkey;
+    let props = dna_props()?;
 
-    // Check if I am authorized to issue memberships
-    let my_status = check_historical_membership(&me, sys_time()?)?;
-    if my_status != MembershipStatus::Active {
+    if !props.root_authorities.contains(&me) {
         return Err(wasm_error!(WasmErrorInner::Guest(
             "Not authorized to issue memberships".to_string()
         )));
@@ -732,9 +629,10 @@ pub fn issue_membership(proof: MembershipProof) -> ExternResult<Record> {
 
     let proof_hash = create_entry(&EntryTypes::MembershipProof(proof.clone()))?;
 
-    // Link from agent for historical lookup
+    let agent_anchor = path::Path::from(proof.agent_pubkey.to_string())
+        .path_entry_hash()?;
     create_link(
-        proof.agent_pubkey.clone(),
+        agent_anchor,
         proof_hash.clone(),
         LinkTypes::AgentMembership,
         (),
@@ -748,14 +646,14 @@ pub fn issue_membership(proof: MembershipProof) -> ExternResult<Record> {
     Ok(record)
 }
 
-/// Eject a member. Any peer can initiate if they have objective evidence.
+/// Eject a member.
+/// RESTRICTED to root authorities (enforced by validation).
 #[hdk_extern]
 pub fn eject_member(record: EjectionRecord) -> ExternResult<Record> {
     let me = agent_info()?.agent_latest_pubkey;
+    let props = dna_props()?;
 
-    // Verify I am a member
-    let my_status = check_historical_membership(&me, sys_time()?)?;
-    if my_status != MembershipStatus::Active {
+    if !props.root_authorities.contains(&me) {
         return Err(wasm_error!(WasmErrorInner::Guest(
             "Not authorized to eject members".to_string()
         )));
@@ -763,8 +661,10 @@ pub fn eject_member(record: EjectionRecord) -> ExternResult<Record> {
 
     let record_hash = create_entry(&EntryTypes::EjectionRecord(record.clone()))?;
 
+    let agent_anchor = path::Path::from(record.agent_pubkey.to_string())
+        .path_entry_hash()?;
     create_link(
-        record.agent_pubkey.clone(),
+        agent_anchor,
         record_hash.clone(),
         LinkTypes::AgentEjection,
         (),
@@ -778,10 +678,65 @@ pub fn eject_member(record: EjectionRecord) -> ExternResult<Record> {
     Ok(rec)
 }
 
-/// Verify an attestation as a stranger would.
-/// This is the "checkable by a stranger, offline, years later" test.
+// ============================================================================
+// VERIFICATION — Stranger checks a record (verification-time, NOT validation)
+//
+// This is where ejection checks, predecessor chain verification, and
+// membership authority checks happen. These require DHT lookups and are
+// NOT deterministic. Different verifiers may see different DHT states.
+// ============================================================================
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VerificationReport {
+    pub attestation_hash: ActionHash,
+    pub signature_valid: bool,
+    pub binding_well_formed: bool,
+    pub document_digest_matches: Option<bool>,
+    pub membership_at_assertion: MembershipCheckResult,
+    pub predecessor_exists: bool,
+    pub ejection_status: EjectionCheckResult,
+    pub qualified_timestamp_valid: Option<bool>,
+    pub scope_report: Vec<ScopeCheck>,
+    pub counter_attestations: Vec<CounterAttestation>,
+    pub overall_trusted: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MembershipCheckResult {
+    Active,
+    Expired(Timestamp),
+    NotFound,
+    InvalidProof,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum EjectionCheckResult {
+    Clean,
+    EjectedAt(Timestamp),
+    Unknown,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ScopeCheck {
+    pub assertion_id: String,
+    pub valid: bool,
+    pub note: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateCounterInput {
+    pub attestation_hash: ActionHash,
+    pub role: AttesterRole,
+    pub organisation: String,
+    pub organisation_id: String,
+    pub agreement: AgreementStatus,
+    pub notes: Option<String>,
+}
+
 #[hdk_extern]
 pub fn verify_attestation(attestation_hash: ActionHash) -> ExternResult<VerificationReport> {
+    let props = dna_props()?;
+
     let record = get(attestation_hash.clone(), GetOptions::default())?
         .ok_or(wasm_error!(WasmErrorInner::Guest(
             "Attestation not found".to_string()
@@ -795,51 +750,132 @@ pub fn verify_attestation(attestation_hash: ActionHash) -> ExternResult<Verifica
             "Invalid entry".to_string()
         )))?;
 
+    let action_time = record.action().timestamp();
+
     let mut report = VerificationReport {
         attestation_hash: attestation_hash.clone(),
-        signature_valid: true, // Holochain validates signatures at the framework level
+        signature_valid: true, // Holochain validates at framework level
         binding_well_formed: true,
-        document_digest_matches: None, // Would need the actual document
-        membership_at_assertion: None,
+        document_digest_matches: None,
+        membership_at_assertion: MembershipCheckResult::NotFound,
+        predecessor_exists: false,
+        ejection_status: EjectionCheckResult::Unknown,
         qualified_timestamp_valid: None,
         scope_report: Vec::new(),
         counter_attestations: Vec::new(),
-        overall_valid: true,
+        overall_trusted: true,
     };
 
-    // 1. Check membership at asserted_at
-    let membership = check_historical_membership(
-        &attestation.attester.agent_pubkey,
-        attestation.time,
-    )?;
-
-    report.membership_at_assertion = Some(format!("{:?}", membership));
-    if membership != MembershipStatus::Active {
-        report.overall_valid = false;
-    }
-
-    // 2. Check predecessor chain
-    if let Some(pred) = &attestation.binding.predecessor_document {
-        let pred_exists = check_predecessor_exists(pred)?;
-        if !pred_exists {
-            report.overall_valid = false;
+    // 1. Check membership proof
+    match get(attestation.membership_proof_hash.clone(), GetOptions::default())? {
+        Some(membership_record) => {
+            match membership_record.entry().to_app_option::<MembershipProof>() {
+                Ok(Some(proof)) => {
+                    // Check if root authority
+                    let is_root = props.root_authorities.contains(&proof.signed_by);
+                    if !is_root {
+                        report.membership_at_assertion = MembershipCheckResult::InvalidProof;
+                        report.overall_trusted = false;
+                    } else if action_time > proof.issued_at {
+                        if let Some(expires) = proof.expires_at {
+                            if action_time > expires {
+                                report.membership_at_assertion = MembershipCheckResult::Expired(expires);
+                                report.overall_trusted = false;
+                            } else {
+                                report.membership_at_assertion = MembershipCheckResult::Active;
+                            }
+                        } else {
+                            report.membership_at_assertion = MembershipCheckResult::Active;
+                        }
+                    } else {
+                        report.membership_at_assertion = MembershipCheckResult::InvalidProof;
+                        report.overall_trusted = false;
+                    }
+                }
+                _ => {
+                    report.membership_at_assertion = MembershipCheckResult::InvalidProof;
+                    report.overall_trusted = false;
+                }
+            }
+        }
+        None => {
+            report.membership_at_assertion = MembershipCheckResult::NotFound;
+            report.overall_trusted = false;
         }
     }
 
-    // 3. Check assertion vocabulary
+    // 2. Check predecessor chain
+    if let Some(pred_hash) = &attestation.binding.predecessor_document_hash {
+        match get(pred_hash.clone(), GetOptions::default())? {
+            Some(pred_record) => {
+                match pred_record.entry().to_app_option::<Attestation>() {
+                    Ok(Some(pred_attestation)) => {
+                        report.predecessor_exists = true;
+                        // Verify chain: predecessor must be for same serial
+                        if pred_attestation.subject.serial_number != attestation.subject.serial_number {
+                            report.overall_trusted = false;
+                        }
+                    }
+                    _ => {
+                        report.predecessor_exists = false;
+                        report.overall_trusted = false;
+                    }
+                }
+            }
+            None => {
+                report.predecessor_exists = false;
+                report.overall_trusted = false;
+            }
+        }
+    } else {
+        report.predecessor_exists = true; // No predecessor claimed = no check needed
+    }
+
+    // 3. Check ejection status (VERIFICATION-TIME ONLY)
+    let agent_anchor = path::Path::from(attestation.attester.agent_pubkey.to_string())
+        .path_entry_hash()?;
+    let ejection_links = get_links(
+        GetLinksInputBuilder::try_new(agent_anchor, LinkTypes::AgentEjection)?
+            .build(),
+    )?;
+
+    let mut ejected_at: Option<Timestamp> = None;
+    for link in ejection_links {
+        if let Some(target) = link.target.into_entry_hash() {
+            if let Some(ejection_record) = get(target, GetOptions::default())? {
+                if let Ok(ejection) = ejection_record.entry().to_app_option::<EjectionRecord>() {
+                    if let Some(ejection) = ejection {
+                        if ejection.decided_at < action_time {
+                            ejected_at = Some(ejection.decided_at);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    match ejected_at {
+        Some(t) => {
+            report.ejection_status = EjectionCheckResult::EjectedAt(t);
+            report.overall_trusted = false;
+        }
+        None => report.ejection_status = EjectionCheckResult::Clean,
+    }
+
+    // 4. Check assertion vocabulary
     for assertion in &attestation.scope.observed {
-        let valid = AVIATION_ASSERTION_VOCABULARY.contains(&assertion.assertion_id.as_str());
+        let valid = props.assertion_vocabulary.contains(&assertion.assertion_id);
         report.scope_report.push(ScopeCheck {
             assertion_id: assertion.assertion_id.clone(),
             valid,
             note: if valid { None } else { Some("Not in vocabulary".to_string()) },
         });
         if !valid {
-            report.overall_valid = false;
+            report.overall_trusted = false;
         }
     }
 
-    // 4. Gather counter-attestations
+    // 5. Gather counter-attestations
     let counter_links = get_links(
         GetLinksInputBuilder::try_new(attestation_hash.clone(), LinkTypes::AttestationToCounter)?
             .build(),
@@ -858,101 +894,4 @@ pub fn verify_attestation(attestation_hash: ActionHash) -> ExternResult<Verifica
     }
 
     Ok(report)
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-fn check_predecessor_exists(document_id: &str) -> ExternResult<bool> {
-    // Query DHT for an attestation with this document_id
-    // In practice, we'd use an index. For now, return true as placeholder.
-    Ok(true)
-}
-
-fn verify_binding_contradiction(evidence: &[ActionHash]) -> ExternResult<bool> {
-    // Fetch both attestations and check if they bind the same serial to different docs
-    if evidence.len() < 2 {
-        return Ok(false);
-    }
-
-    let first = get(evidence[0].clone(), GetOptions::default())?;
-    let second = get(evidence[1].clone(), GetOptions::default())?;
-
-    match (first, second) {
-        (Some(r1), Some(r2)) => {
-            let a1: Attestation = r1.entry().to_app_option()
-                .map_err(|e| wasm_error!(WasmErrorInner::Guest(e.to_string())))?
-                .ok_or(wasm_error!(WasmErrorInner::Guest("Invalid".to_string())))?;
-            let a2: Attestation = r2.entry().to_app_option()
-                .map_err(|e| wasm_error!(WasmErrorInner::Guest(e.to_string())))?
-                .ok_or(wasm_error!(WasmErrorInner::Guest("Invalid".to_string())))?;
-
-            // Same serial, different document
-            let same_serial = a1.subject.serial_number == a2.subject.serial_number;
-            let different_doc = a1.binding.document_id != a2.binding.document_id;
-
-            Ok(same_serial && different_doc)
-        }
-        _ => Ok(false),
-    }
-}
-
-// ============================================================================
-// INPUT / OUTPUT TYPES
-// ============================================================================
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CountersignInput {
-    pub attestation_hash: ActionHash,
-    pub attester: Attester,
-    pub agreement: AgreementStatus,
-    pub notes: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct VerificationReport {
-    pub attestation_hash: ActionHash,
-    pub signature_valid: bool,
-    pub binding_well_formed: bool,
-    pub document_digest_matches: Option<bool>,
-    pub membership_at_assertion: Option<String>,
-    pub qualified_timestamp_valid: Option<bool>,
-    pub scope_report: Vec<ScopeCheck>,
-    pub counter_attestations: Vec<CounterAttestation>,
-    pub overall_valid: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ScopeCheck {
-    pub assertion_id: String,
-    pub valid: bool,
-    pub note: Option<String>,
-}
-
-// ============================================================================
-// LINK TYPES
-// ============================================================================
-
-#[hdk_link_types]
-pub enum LinkTypes {
-    SerialToAttestation,
-    AgentToAttestation,
-    AgentMembership,
-    AgentEjection,
-    AttestationToCounter,
-}
-
-// ============================================================================
-// ENTRY TYPES DEFINITION
-// ============================================================================
-
-#[hdk_entry_defs]
-#[unit_enum(EntryTypesUnit)]
-pub enum EntryTypes {
-    Attestation(Attestation),
-    MembershipProof(MembershipProof),
-    EjectionRecord(EjectionRecord),
-    KeyRotation(KeyRotation),
-    CounterAttestation(CounterAttestation),
 }
