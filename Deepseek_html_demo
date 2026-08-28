@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AVIATION PROVENANCE — Release Attestation Demo</title>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --panel: #fff;
+            --ink: #17212b;
+            --muted: #66727e;
+            --line: #d9e0e6;
+            --good: #16734a;
+            --bad: #b42318;
+            --warn: #9a6700;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: Inter, Segoe UI, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--ink)
+        }
+        header {
+            background: #17212b;
+            color: white;
+            padding: 22px 28px
+        }
+        header h1 {
+            margin: 0 0 5px;
+            font-size: 25px
+        }
+        header p {
+            margin: 0;
+            color: #cbd5dc
+        }
+        main {
+            max-width: 1180px;
+            margin: 24px auto;
+            padding: 0 18px
+        }
+        .intro {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 18px
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 18px
+        }
+        .wide {
+            grid-column: 1 / -1
+        }
+        h2 {
+            font-size: 18px;
+            margin: 0 0 12px
+        }
+        h3 {
+            font-size: 15px;
+            margin: 15px 0 7px
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            margin: 9px 0 4px
+        }
+        input,
+        select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #c8d0d7;
+            border-radius: 7px;
+            background: white;
+            font-size: 14px
+        }
+        button {
+            border: 0;
+            border-radius: 7px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            background: #17212b;
+            color: #fff;
+            margin-top: 12px;
+            margin-right: 8px;
+        }
+        button.secondary {
+            background: #e8edf1;
+            color: #17212b
+        }
+        button.danger {
+            background: #b42318;
+            color: #fff;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 14px;
+            border-radius: 9px;
+            margin-top: 14px;
+            font-weight: 700
+        }
+        .good {
+            background: #e8f6ef;
+            color: var(--good);
+            border: 1px solid #b9e3cd
+        }
+        .bad {
+            background: #fdecea;
+            color: var(--bad);
+            border: 1px solid #f2c1bc
+        }
+        .warn {
+            background: #fff5dc;
+            color: var(--warn);
+            border: 1px solid #ead28f
+        }
+        .chain {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 15px 0
+        }
+        .node {
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: #fafbfc;
+            text-align: center;
+            min-width: 150px
+        }
+        .arrow {
+            font-size: 20px;
+            color: var(--muted)
+        }
+        .checks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px
+        }
+        .check {
+            padding: 9px 11px;
+            border-radius: 7px;
+            background: #f6f8fa;
+            border: 1px solid var(--line);
+            font-size: 13px
+        }
+        .check.ok {
+            border-left: 4px solid var(--good)
+        }
+        .check.fail {
+            border-left: 4px solid var(--bad)
+        }
+        .small {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.45
+        }
+        .pill {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 20px;
+            background: #e8edf1;
+            font-size: 11px;
+            font-weight: 700
+        }
+        .evidence-section {
+            background: #f8f9fb;
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 12px;
+            border: 1px dashed var(--line);
+            display: none;
+        }
+        .evidence-section.visible {
+            display: block;
+        }
+        .evidence-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .evidence-input input {
+            padding: 7px;
+            font-size: 13px;
+        }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .step {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #e8edf1;
+            color: var(--muted);
+        }
+        .step.active {
+            background: #17212b;
+            color: white;
+        }
+        .step.done {
+            background: var(--good);
+            color: white;
+        }
+        .step.failed {
+            background: var(--bad);
+            color: white;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .org-selector {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .org-selector .org-card {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid var(--line);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+        .org-selector .org-card:hover {
+            border-color: #17212b;
+        }
+        .org-selector .org-card.selected {
+            border-color: var(--good);
+            background: #e8f6ef;
+        }
+        .org-selector .org-card .org-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .org-selector .org-card .org-desc {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+        .org-selector .org-card .org-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 6px;
+            background: #e8edf1;
+            color: var(--muted);
+        }
+        @media(max-width:800px) {
+            .grid {
+                grid-template-columns: 1fr
+            }
+            .wide {
+                grid-column: auto
+            }
+            .checks {
+                grid-template-columns: 1fr
+            }
+            .evidence-input {
+                grid-template-columns: 1fr;
+            }
+            .org-selector {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AVIATION PROVENANCE — Release Attestation Demo</h1>
+        <p>A simple visual demonstration of the logic implemented in the supplied Holochain Zome v3.</p>
+    </header>
+    <main>
+        <section class="intro">
+            <strong>What this demonstrates</strong>
+            <p class="small">
+                <b>Simulation note:</b> this is a visual explanation of the Zome's logic, not a live Holochain network.
+                In particular, the buttons below illustrate what the Rust validation rules would accept or reject.
+                <br><br>
+                A regulated organisation can publish an attestation about a specific serialized aviation part.
+                Another party can independently verify the attestation against its membership proof, predecessor record,
+                vocabulary and ejection status. The demo deliberately makes the “bad data” case visible.
+            </p>
+        </section>
+
+        <div class="grid">
+            <section class="card">
+                <h2>1. Accredited organisation</h2>
+                <p class="small">Select or configure the organisation that will issue the attestation. These are real-world aviation maintenance and manufacturing organisations.</p>
+
+                <!-- Organisation selector -->
+                <div class="org-selector" id="orgSelector">
+                    <div class="org-card" data-org="AeroMaintenance UK Ltd" data-accred="EASA Part-145" data-cert="UK.145.01234" data-role="MRO">
+                        <div class="org-name">✈️ AeroMaintenance UK Ltd</div>
+                        <div class="org-desc">MRO provider · EASA Part-145 approved</div>
+                        <span class="org-badge">Maintenance &amp; Repair</span>
+                    </div>
+                    <div class="org-card" data-org="Pacific Aero Components" data-accred="FAA Repair Station" data-cert="FAA.7R.8821" data-role="RepairStation">
+                        <div class="org-name">🔧 Pacific Aero Components</div>
+                        <div class="org-desc">FAA Repair Station · Specializes in turbine engines</div>
+                        <span class="org-badge">Component Overhaul</span>
+                    </div>
+                </div>
+
+                <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:14px;">
+                    <p class="small" style="margin-bottom:8px;"><b>Or configure manually:</b></p>
+                    <label>Organisation</label>
+                    <input id="org" value="AeroMaintenance UK Ltd">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label>Accreditation</label>
+                            <select id="accred">
+                                <option>FAA Repair Station</option>
+                                <option selected>EASA Part-145</option>
+                                <option>EASA Part-21G</option>
+                                <option>OEM Authorized</option>
+                                <option>Distributor Accredited</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Certificate number</label>
+                            <input id="cert" value="UK.145.01234">
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="issueMembership()">Issue membership proof</button>
+                <div id="membership"></div>
+            </section>
+
+            <section class="card">
+                <h2>2. Create release attestation</h2>
+                <p class="small">The attestation binds a part identity to a document digest and predecessor.</p>
+                <label>Part number</label><input id="pn" value="AE3007-12345">
+                <label>Serial number</label><input id="sn" value="SN-004821">
+                <label>Document</label><input id="doc" value="FAA8130-3-77821">
+                <label>Document digest</label><input id="digest" value="SHA256:8a91...f02c">
+                <button onclick="createAttestation()">Create attestation</button>
+                <div id="attestation"></div>
+            </section>
+
+            <section class="card wide">
+                <h2>3. Provenance chain</h2>
+                <div class="chain" id="chain">
+                    <div class="node"><b>Part</b><br><span id="chainPart">SN-004821</span></div>
+                    <div class="arrow">→</div>
+                    <div class="node"><b>Current attestation</b><br><span id="chainDoc">FAA8130-3-77821</span></div>
+                    <div class="arrow">→</div>
+                    <div class="node"><b>Predecessor</b><br>Previous release record</div>
+                </div>
+                <p class="small">
+                    The real zome stores hashes and links rather than relying on this visual representation.
+                    Predecessor existence is checked at verification time, allowing an offline attestation to reference
+                    a record that has not yet reached the DHT.
+                </p>
+            </section>
+
+            <section class="card">
+                <h2>4. Independent verification</h2>
+                <p class="small">This mirrors the verification report concept in the zome.</p>
+                <button onclick="verify(true)">Verify clean attestation</button>
+                <button class="secondary" onclick="verify(false)">Simulate contradictory provenance</button>
+                <div id="verification"></div>
+            </section>
+
+            <section class="card">
+                <h2>5. Peer-driven ejection</h2>
+                <p class="small">
+                    <b>Two-step process:</b> First, attempt to eject a member (anyone can try). Then, provide qualifying
+                    evidence. The network's deterministic validation will accept or reject based on the evidence.
+                </p>
+
+                <!-- Step indicator -->
+                <div class="step-indicator">
+                    <span class="step" id="step1">1. Attempt</span>
+                    <span class="step" id="step2">2. Provide evidence</span>
+                    <span class="step" id="step3">3. Validation</span>
+                </div>
+
+                <!-- Attempt ejection -->
+                <button onclick="attemptEjection()">1. Attempt ejection</button>
+                <div id="ejection-attempt"></div>
+
+                <!-- Evidence section (hidden until attempt) -->
+                <div class="evidence-section" id="evidenceSection">
+                    <p class="small" style="margin-bottom:8px;">
+                        <b>Provide qualifying evidence:</b> The zome requires 2 contradictory attestations
+                        for the same serial number with different documents.
+                    </p>
+                    <div class="evidence-input">
+                        <div>
+                            <label style="font-size:11px;">Attestation 1 document</label>
+                            <input id="evidenceDoc1" value="FAA8130-3-77821" placeholder="Document ID 1">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;">Attestation 2 document</label>
+                            <input id="evidenceDoc2" value="EASA-1-99234" placeholder="Document ID 2">
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button onclick="submitValidEvidence()">✅ Submit valid evidence</button>
+                        <button class="secondary" onclick="submitInvalidEvidence()">❌ Submit invalid evidence</button>
+                        <button class="danger" onclick="cancelEjection()">✖ Cancel attempt</button>
+                    </div>
+                    <div id="ejection-evidence"></div>
+                </div>
+
+                <!-- Final result -->
+                <div id="ejection-final"></div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        // ----- global state -----
+        let membershipIssued = false;
+        let attestationCreated = false;
+        let ejected = false;
+        let ejectionAttempted = false;
+        let evidenceSubmitted = false;
+        let ejectionCancelled = false;
+        let selectedOrg = 'AeroMaintenance UK Ltd';
+
+        // DOM refs
+        const org = document.getElementById('org');
+        const accred = document.getElementById('accred');
+        const cert = document.getElementById('cert');
+        const pn = document.getElementById('pn');
+        const sn = document.getElementById('sn');
+        const doc = document.getElementById('doc');
+        const digest = document.getElementById('digest');
+        const chainPart = document.getElementById('chainPart');
+        const chainDoc = document.getElementById('chainDoc');
+        const membershipDiv = document.getElementById('membership');
+        const attestationDiv = document.getElementById('attestation');
+        const verificationDiv = document.getElementById('verification');
+        const ejectionAttemptDiv = document.getElementById('ejection-attempt');
+        const ejectionEvidenceDiv = document.getElementById('ejection-evidence');
+        const ejectionFinalDiv = document.getElementById('ejection-final');
+        const evidenceSection = document.getElementById('evidenceSection');
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+        const orgCards = document.querySelectorAll('.org-card');
+
+        // ----- Organisation selection -----
+        orgCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // Deselect all
+                orgCards.forEach(c => c.classList.remove('selected'));
+
+                // Select this one
+                this.classList.add('selected');
+
+                // Update form fields
+                org.value = this.dataset.org;
+                accred.value = this.dataset.accred;
+                cert.value = this.dataset.cert;
+                selectedOrg = this.dataset.org;
+
+                // Reset membership if org changes
+                if (membershipIssued) {
+                    membershipIssued = false;
+                    membershipDiv.innerHTML = '';
+                    attestationCreated = false;
+                    attestationDiv.innerHTML = '';
+                    verificationDiv.innerHTML = '';
+                    document.querySelector('button[onclick="attemptEjection()"]').disabled = false;
+                }
+            });
+
+            // Click the first one by default
+            if (card === orgCards[0]) {
+                card.classList.add('selected');
+                org.value = card.dataset.org;
+                accred.value = card.dataset.accred;
+                cert.value = card.dataset.cert;
+                selectedOrg = card.dataset.org;
+            }
+        });
+
+        // ----- helper: update chain display -----
+        function updateChain() {
+            chainPart.textContent = sn.value || 'SN-004821';
+            chainDoc.textContent = doc.value || 'FAA8130-3-77821';
+        }
+
+        // ----- 1. membership -----
+        function issueMembership() {
+            membershipIssued = true;
+            membershipDiv.innerHTML =
+                '<div class="status good">✓ Membership valid<br><span class="small">Issued by root authority · ' +
+                org.value + ' · ' + accred.value + ' · ' + cert.value + '</span></div>';
+        }
+
+        // ----- 2. create attestation -----
+        function createAttestation() {
+            if (!membershipIssued) {
+                attestationDiv.innerHTML = '<div class="status warn">Membership proof required first.</div>';
+                return;
+            }
+            attestationCreated = true;
+            updateChain();
+            attestationDiv.innerHTML =
+                '<div class="status good">✓ Attestation created<br><span class="small">Part ' +
+                pn.value + ' / serial ' + sn.value + ' bound to ' + doc.value + '<br>Issued by: ' + org.value + '</span></div>';
+        }
+
+        // ----- 4. verification (clean / contradictory) -----
+        function verify(clean) {
+            if (!attestationCreated) {
+                verificationDiv.innerHTML = '<div class="status warn">Create an attestation first.</div>';
+                return;
+            }
+            const ok = clean && !ejected;
+            verificationDiv.innerHTML =
+                '<div class="status ' + (ok ? 'good' : 'bad') + '">' + (ok ? '✓ OVERALL TRUSTED' : '✕ NOT TRUSTED') + '</div>' +
+                '<div class="checks">' +
+                '<div class="check ok">✓ Membership at assertion: Active (' + org.value + ')</div>' +
+                '<div class="check ' + (clean ? 'ok' : 'fail') + '">' + (clean ? '✓' : '✕') + ' Predecessor chain: ' + (clean ?
+                    'valid' : 'contradictory') + '</div>' +
+                '<div class="check ' + (ejected ? 'fail' : 'ok') + '">' + (ejected ? '✕' : '✓') + ' Ejection status: ' + (
+                    ejected ? 'Ejected' : 'Clean') + '</div>' +
+                '<div class="check ok">✓ Assertion vocabulary: valid</div>' +
+                '</div>';
+        }
+
+        // ----- 5a. attempt ejection (first step) -----
+        function attemptEjection() {
+            if (!attestationCreated) {
+                ejectionAttemptDiv.innerHTML = '<div class="status warn">Create an attestation first.</div>';
+                return;
+            }
+
+            if (ejected) {
+                ejectionAttemptDiv.innerHTML = '<div class="status bad">' + org.value + ' is already ejected.</div>';
+                return;
+            }
+
+            ejectionAttempted = true;
+            ejectionCancelled = false;
+            step1.className = 'step done';
+
+            ejectionAttemptDiv.innerHTML =
+                '<div class="status warn">⏳ Ejection attempt submitted<br><span class="small">' +
+                'A peer has submitted an ejection record for ' + org.value + ' (serial: ' + sn.value +
+                '). The network is waiting for evidence to validate.</span></div>';
+
+            // Show evidence section
+            evidenceSection.className = 'evidence-section visible';
+            step2.className = 'step active';
+
+            // Auto-fill evidence with the current attestation's doc
+            document.getElementById('evidenceDoc1').value = doc.value;
+            document.getElementById('evidenceDoc2').value = 'EASA-1-99234';
+
+            // Clear any previous results
+            ejectionFinalDiv.innerHTML = '';
+            ejectionEvidenceDiv.innerHTML = '';
+            step3.className = 'step';
+
+            // Enable evidence buttons
+            document.querySelectorAll('#evidenceSection button').forEach(b => b.disabled = false);
+        }
+
+        // ----- 5b. submit valid evidence -----
+        function submitValidEvidence() {
+            if (!ejectionAttempted || ejectionCancelled) {
+                ejectionEvidenceDiv.innerHTML = '<div class="status warn">Please attempt ejection first.</div>';
+                return;
+            }
+
+            const doc1 = document.getElementById('evidenceDoc1').value.trim();
+            const doc2 = document.getElementById('evidenceDoc2').value.trim();
+
+            // Validate evidence: need 2 different docs
+            if (doc1 === doc2) {
+                ejectionEvidenceDiv.innerHTML =
+                    '<div class="status bad">✕ EVIDENCE REJECTED<br><span class="small">' +
+                    'Need 2 different documents to show contradiction. Both are "' + doc1 + '".</span></div>';
+                return;
+            }
+
+            if (doc1 === '' || doc2 === '') {
+                ejectionEvidenceDiv.innerHTML =
+                    '<div class="status warn">⚠️ Please provide both document IDs.</div>';
+                return;
+            }
+
+            evidenceSubmitted = true;
+            step2.className = 'step done';
+            step3.className = 'step active';
+
+            // Valid evidence - ejection succeeds
+            ejected = true;
+            ejectionEvidenceDiv.innerHTML =
+                '<div class="status good">✓ EVIDENCE ACCEPTED<br><span class="small">' +
+                'Grounds: ContradictoryBindings · 2 attestations · same serial number (' + sn.value +
+                ') · different documents (' + doc1 + ', ' + doc2 + ') · ' +
+                'both produced by the subject being ejected (' + org.value + ').</span></div>';
+
+            ejectionFinalDiv.innerHTML =
+                '<div class="status good" style="margin-top:12px;">✓ EJECTION RECORD VALIDATED<br><span class="small">' +
+                'The network has validated the evidence. ' + org.value + ' is now ejected.</span></div>';
+
+            step3.className = 'step done';
+
+            // Re-run verification to show updated trust status
+            verify(true);
+
+            // Disable further attempts
+            document.querySelector('button[onclick="attemptEjection()"]').disabled = true;
+            document.querySelectorAll('#evidenceSection button').forEach(b => b.disabled = true);
+        }
+
+        // ----- 5c. submit invalid evidence (fraudulent/mistaken) -----
+        function submitInvalidEvidence() {
+            if (!ejectionAttempted || ejectionCancelled) {
+                ejectionEvidenceDiv.innerHTML = '<div class="status warn">Please attempt ejection first.</div>';
+                return;
+            }
+
+            const doc1 = document.getElementById('evidenceDoc1').value.trim();
+            const doc2 = document.getElementById('evidenceDoc2').value.trim();
+
+            // Scenario 1: Same document (not contradictory)
+            if (doc1 === doc2 && doc1 !== '') {
+                evidenceSubmitted = true;
+                step2.className = 'step done';
+                step3.className = 'step failed';
+
+                ejectionEvidenceDiv.innerHTML =
+                    '<div class="status bad">✕ EVIDENCE REJECTED<br><span class="small">' +
+                    'Grounds: ContradictoryBindings requires 2 different documents. ' +
+                    'Both attestations have the same document ID: "' + doc1 + '".<br><br>' +
+                    '<b>Result:</b> ' + org.value + ' remains clean. The ejection attempt has failed.</span></div>';
+
+                ejectionFinalDiv.innerHTML =
+                    '<div class="status good" style="margin-top:12px;">✓ ' + org.value + ' REMAINS CLEAN<br><span class="small">' +
+                    'The ejection attempt was rejected due to insufficient evidence. ' +
+                    'This protects ' + org.value + ' from fraudulent or mistaken accusations.</span></div>';
+
+                step3.className = 'step failed';
+                return;
+            }
+
+            // Scenario 2: Missing documents
+            if (doc1 === '' || doc2 === '') {
+                evidenceSubmitted = true;
+                step2.className = 'step done';
+                step3.className = 'step failed';
+
+                ejectionEvidenceDiv.innerHTML =
+                    '<div class="status bad">✕ EVIDENCE REJECTED<br><span class="small">' +
+                    'Missing document IDs. Evidence must reference 2 attestations for serial: ' + sn.value + '.<br><br>' +
+                    '<b>Result:</b> ' + org.value + ' remains clean. The ejection attempt has failed.</span></div>';
+
+                ejectionFinalDiv.innerHTML =
+                    '<div class="status good" style="margin-top:12px;">✓ ' + org.value + ' REMAINS CLEAN<br><span class="small">' +
+                    'The ejection attempt was rejected due to insufficient evidence.</span></div>';
+
+                step3.className = 'step failed';
+                return;
+            }
+
+            // Scenario 3: Evidence mismatch (different serial numbers would be caught)
+            evidenceSubmitted = true;
+            step2.className = 'step done';
+            step3.className = 'step failed';
+
+            ejectionEvidenceDiv.innerHTML =
+                '<div class="status bad">✕ EVIDENCE REJECTED<br><span class="small">' +
+                'Evidence mismatch: The provided attestations (' + doc1 + ', ' + doc2 +
+                ') do not both reference serial ' + sn.value + '.<br><br>' +
+                '<b>Result:</b> ' + org.value + ' remains clean. The ejection attempt has failed.</span></div>';
+
+            ejectionFinalDiv.innerHTML =
+                '<div class="status good" style="margin-top:12px;">✓ ' + org.value + ' REMAINS CLEAN<br><span class="small">' +
+                'The ejection attempt was rejected. ' + org.value + ' is protected from unsubstantiated claims.</span></div>';
+
+            step3.className = 'step failed';
+        }
+
+        // ----- 5d. cancel ejection (genuine mistake / second thoughts) -----
+        function cancelEjection() {
+            if (!ejectionAttempted) {
+                return;
+            }
+
+            ejectionCancelled = true;
+            evidenceSection.className = 'evidence-section';
+            step1.className = 'step failed';
+            step2.className = 'step';
+            step3.className = 'step';
+
+            ejectionAttemptDiv.innerHTML =
+                '<div class="status warn">⏹️ Ejection attempt cancelled<br><span class="small">' +
+                'The peer withdrew their ejection attempt against ' + org.value + '. No action was taken.</span></div>';
+
+            ejectionFinalDiv.innerHTML =
+                '<div class="status good" style="margin-top:12px;">✓ ' + org.value + ' REMAINS CLEAN<br><span class="small">' +
+                'The ejection attempt was cancelled before evidence was submitted.</span></div>';
+
+            document.querySelectorAll('#evidenceSection button').forEach(b => b.disabled = true);
+        }
+
+        // ----- extra: keep chain in sync if inputs change -----
+        document.querySelectorAll('#sn, #doc').forEach(el => {
+            el.addEventListener('input', updateChain);
+        });
+        updateChain();
+
+        // Auto-update evidence doc1 when main doc changes
+        document.getElementById('doc').addEventListener('input', function() {
+            if (!ejectionAttempted) {
+                document.getElementById('evidenceDoc1').value = this.value;
+            }
+        });
+    </script>
+
+</body>
+</html>
