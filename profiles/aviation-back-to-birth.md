@@ -62,3 +62,71 @@ If it has, this profile closes. If it has not, and the coalition is still active
 strongest opening found in the entire survey.
 
 Also worth checking: **SAE AIR7123**, blockchain-for-ARC work in progress, unread.
+
+---
+
+## What Chapter 16 actually says (clean-room notes, 2026-08-28)
+
+Read from a licensed copy. **Nothing here reproduces the specification text** - it is described in
+our own words, by reference only. The document itself is licensed per-purchaser, must not be
+redistributed, and must never enter this repository.
+
+### 1. The back-to-birth chain already exists in the standard
+
+This was the surprise. Chapter 16 already specifies how one certificate links to the one before it:
+a new form carries a reference to the immediately preceding form for that part - by its tracking
+number, the issuing supplier's code, and a flag for whether that predecessor was electronic or paper.
+Where the predecessor was electronic, it is attached to the new form **with its signature intact**.
+
+**So back-to-birth traceability is already a linked chain of attached signed forms.** It has been
+specified since at least the 2019 revision.
+
+That reframes Recommendation #9 completely. The coalition is not asking for a data structure that
+does not exist. **They are asking for something the format cannot give them.**
+
+### 2. The gap is written into the specification's own scope exclusion
+
+Chapter 16 states that it does not cover the internal processes companies use to generate the data,
+**to authorise the users or signers of that data**, or to store and repurpose it. The stated reason
+is that those processes are company-specific and governed by company policy or regulator guidance,
+so standardising them is neither necessary nor desirable for exchanging data between companies.
+
+**Read that against Recommendation #9.** The standard defines how a signed certificate travels and
+how it chains to its predecessor. It explicitly declines to say **who is entitled to sign one**.
+
+That is the trust list problem, named by the standard itself, as a deliberate exclusion.
+
+**This is the aviation equivalent of the bunker seal-number gap** - and it is a stronger finding,
+because it is not an omission or an oversight. It is a boundary the standard drew on purpose, for
+reasons that were correct for exchange between two known trading partners and that fail completely
+for a stranger checking a chain twenty years later.
+
+### 3. Their trust model, and where it breaks
+
+The security model is conventional PKI: a per-individual digital certificate at a defined assurance
+level, a W3C XML Signature bound to it, and validation by the recipient of both the signature and
+the certificate's validity **at the time of signing**. The organisation named in the certificate is
+expected to match the issuing organisation on the form.
+
+Two consequences follow, and both are ours to address:
+
+- **Validation is at time of signing, historically.** Exactly the hard part flagged in `SPEC.md`
+  section 7 step 4. They require it; they do not solve it for the long term.
+- **The standard acknowledges the expiry problem directly.** It notes that certificates have limited
+  lifetimes, that a signature may need validating long after its certificate expired, and offers two
+  approaches. **This is our "key rotation and long-lived records" known-unfinished item, and the
+  industry has already met it.** Read their approaches before designing anything.
+
+### 4. What this means for the build
+
+- **Do not design a new certificate format.** One exists, it is in use, and it chains.
+- **The demonstrable gap is entitlement over time:** proving a signer was authorised at the moment
+  of signing, checkable by a stranger years later, with no operator and no surviving employer.
+- The form covers FAA 8130-3, EASA Form 1, CASA Form 1 and TCCA Form One, plus Certificates of
+  Conformance and Transfer Documents - so a demonstration built on the FAA form generalises.
+
+### 5. Still to read
+
+The data element definitions and block structure, and the two certificate-expiry approaches in
+detail. Also ATA Spec 42, referenced throughout for certificate assurance levels and PKI procedure -
+**that is where the trust anchor lives, and it is a separate licensed document we do not have.**
