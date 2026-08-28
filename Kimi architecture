@@ -1,188 +1,165 @@
-# Holochain Architecture for Aviation Back-to-Birth Attestations
+# Holochain Architecture for Aviation Back-to-Birth — Revised (Post-Review)
 
-## Why Holochain Fits This Problem
+## What Changed
 
-The aviation gap is not a data-format gap. ATA Spec 2000 Chapter 16 already defines the format, the chaining mechanism, and the signature structure. The gap is the **trust anchor** — the answer to "who decides whose signature counts, when every qualified decider is a competitor."
+The review identified six defects, three fatal. This revision addresses all of them:
 
-Holochain's architecture was designed for exactly this class of problem: groups of peers who need shared rules without a shared operator. Here is how each property maps.
-
----
-
-## 1. Agent-Centricity → No Operator, No Competitor Runs the Register
-
-**The problem:** Airbus cannot run the register that Safran's parts flow through. Boeing cannot hold GE's release certificates. The coalition's Recommendation #9 has no owner because no member can be the owner.
-
-**Holochain's answer:** There is no central ledger. Each repair station, airline, OEM, and MRO runs their own **source chain** — a local, cryptographically tamper-evident journal of every attestation they have ever issued. There is no database in the middle. There is no company whose board meeting can shut it down. The "operator" is the DNA — the open-source validation rules that every participant runs on their own machine.
-
-This directly satisfies README.md constraint #2: **"A format and a rulebook, never a platform."** And constraint #3: **"The owner cannot be a participant."**
+1. **Trust anchor:** `ROOT_AUTHORITIES` is now `AgentPubKey` list in DNA properties, not string literals. The bootstrap problem is stated explicitly, not hidden.
+2. **Validation determinism:** No `get()` or `get_links()` in `validate()`. Only `must_get_valid_record()` — deterministic fetches by hash.
+3. **Ejection is verification-time:** Removed from validation. A stranger checking a record queries the DHT for ejection records and applies their own judgement.
+4. **Backdating fixed:** Uses action timestamp, not user-supplied field.
+5. **Theatre removed:** `validation_threshold_met` boolean deleted; predecessor check actually implemented.
+6. **N=2 corrected:** Not countersigning. Local source chains + peer-to-peer exchange.
+7. **Competition law claim deleted:** Architecture does not claim to solve competition law.
 
 ---
 
-## 2. Membrane Proofs → The Trust List Without a List Keeper
+## The Honest Separation: Validation vs Verification
 
-**The problem:** Who decides whose signature counts? A central trust list needs a list keeper. A federation of competitors maintaining a shared list is a concerted refusal to deal under competition law.
+This is the core conceptual fix.
 
-**Holochain's answer:** **Membrane proofs.** To join the DHT (the shared data space), an agent must present a proof that they are accredited by a recognized authority — FAA repair station certificate, EASA Part 145 approval, OEM authorization, etc. The DNA validation rules check this proof deterministically. No human approves or rejects. The existing accreditation infrastructure (FAA, EASA, CAAC) becomes the trust root, not a new intermediary.
+| | Validation (Publish Time) | Verification (Read Time) |
+|---|---|---|
+| **When** | Once, when publishing to DHT | Every time a stranger checks the record |
+| **Constraint** | Must be deterministic — all peers agree | Can use DHT lookups — may see different states |
+| **What it checks** | Structural correctness, signature validity, referenced entries exist, vocabulary closed, timestamps consistent | Membership authority, ejection status, predecessor chain semantic correctness, counter-attestations |
+| **What it prevents** | Malformed entries entering DHT | Nothing — verifiers apply trust |
+| **Holochain mechanism** | `validate()` callback | `verify_attestation()` zome function |
 
-This is not a trust list maintained by competitors. It is a **derivation** from existing regulator accreditation. The coalition does not need to run a membership office. The FAA already did the work.
+**This means: bad attestations can enter the DHT.** A repair station with an invalid membership proof can publish an attestation that passes validation. Peers will store it. The DHT is not a curated database. It is a shared space where anyone can publish, and verifiers apply their own judgement.
 
-**Competition-law survival:** The ejection rule is objective, published in advance, and checkable by anyone (SPEC.md §6). It is expressed as code in the `validate_ejection_creation` function. A peer who detects contradictory bindings can initiate an ejection, but only if they provide evidence that any other peer can independently verify. There is no discretionary override. This is the browser-CA-distrust precedent, implemented as validation logic.
-
----
-
-## 3. Countersigning → Value at N=2
-
-**The problem:** Two parties with no third present must get something on day one. A repair station releases a part to an airline. They are alone. No registry is reachable. No notary is present.
-
-**Holochain's answer:** **Countersigning.** Both parties sign the same attestation entry. The repair station writes the attestation to their source chain; the airline countersigns. The entry is only published to the DHT once both signatures are present. No third party was needed at the moment of transaction. Both hold the same signed statement. Either can hand it to a stranger years later.
-
-This satisfies SPEC.md §4: **"If a proposed feature does not survive this test, it does not go in v1."** The counter-attestation is optional (SPEC.md §4.1: "A counter-attestation MUST NOT be required for the original to verify"), but when present, it is powerful — a recorded disagreement at delivery is worth more than a resolved one.
+This is not a bug. It is the correct model. A PDF on a lab letterhead is also "stored by everyone who receives it" and "trusted by brand, not by cryptographic enforcement." The DHT replaces the email attachment; verification replaces the brand-trust heuristic.
 
 ---
 
-## 4. DHT + Validation Rules → Stranger Verification, Years Later, Offline
+## N=2: How It Actually Works
 
-**The problem:** A surveyor, a court, or a regulator needs to check a chain of custody twenty years after the fact. The repair station that signed may no longer exist. The airline may have merged. The OEM's server is down.
+**The claim in v1 was wrong.** Holochain countersigning requires all parties online simultaneously and is unstable.
 
-**Holochain's answer:** The **DHT (Distributed Hash Table)** is the shared memory. When an attestation is published, it is stored redundantly by multiple peers in the DHT. A stranger with no relationship to any party can:
+**The correct mechanism:**
 
-1. Fetch the attestation from the DHT by its hash
-2. Run the same validation rules (the DNA) on their own machine
-3. Check the signature (Holochain verifies this at the framework level)
-4. Query the DHT for membership proofs and ejection records
-5. Reconstruct whether the attester was a member at `asserted_at`
-6. Follow the predecessor chain from document to document
+1. Repair station writes attestation to their **local source chain** (no network needed).
+2. Repair station shares the attestation with airline via **peer-to-peer exchange** — QR code, Bluetooth, local network, email attachment of the signed entry.
+3. Airline verifies locally: checks signature, checks structural correctness, checks membership proof (if they have it cached).
+4. Airline writes counter-attestation to their own local source chain.
+5. Later, when either party has connectivity, they publish to the DHT.
 
-No contact with the original issuer is required. No server needs to stay alive. The record is checkable because the **rules** are alive on every peer's machine, not because a **server** is alive somewhere.
+**Both parties hold tamper-evident, signed records without a third party present.** The DHT provides redundancy and discoverability for strangers later. It is not required for the pairwise transaction.
 
-This satisfies the core requirement: **"verifiable by a stranger, offline, years later."**
-
----
-
-## 5. No Global Consensus → Scales Without a Blockchain Tax
-
-**The problem:** Aviation has thousands of repair stations, airlines, and MROs worldwide. A blockchain that forces every node to validate every transaction would collapse under the weight. A permissioned blockchain still needs someone to run the validator set — and that someone is a participant.
-
-**Holochain's answer:** **No global consensus.** Each agent validates only the data they create and the data they care about. The DHT provides eventual consistency, not global state agreement. There is no mining, no staking, no gas fees. A repair station in Wichita and an airline in Singapore can issue attestations independently, at local speed, and the DHT gossips the data to peers who need it.
-
-This matters for adoption: **onboarding in an afternoon, without permission** (README.md constraint #4). An accredited repair station downloads the DNA, presents their membrane proof, and starts issuing attestations. No consortium approval. No token purchase. No validator election.
+This satisfies README.md constraint #1: **"Value at N=2. Two parties with no third present must get something on day one."**
 
 ---
 
-## 6. Historical Membership Check → The Hard Part, Addressed
+## The Trust Anchor: What Is Actually Hard
 
-**The problem (SPEC.md §7 step 4):** "Check the attester's membership at `asserted_at` — not at verification time. Membership is historical; this is the hard part."
+The review's first fatal finding is correct and deeper than code.
 
-**The implementation:** The `check_historical_membership` function queries the DHT for all `MembershipProof` and `EjectionRecord` entries linked to an agent, sorts them by timestamp, and reconstructs the timeline:
+**The problem:** The FAA issues repair station certificates via X.509 PKI. The FAA does not have a Holochain public key. There is no cryptographic bridge between the existing accreditation infrastructure and the DHT.
 
-- Was there a valid membership proof issued before `asserted_at`?
-- Was there an ejection record before `asserted_at`?
-- Had the membership expired by `asserted_at`?
+**The pragmatic solution in v2:**
 
-This is not a simple database lookup. It is a **temporal query over an eventually consistent DHT**. The code handles the edge cases: key rotations, expired memberships, re-admissions after ejection.
+1. A **trusted verifier** (or small set of verifiers) checks FAA/EASA certificates out-of-band.
+2. These verifiers are hard-coded as `root_authorities` in the DNA properties (AgentPubKeys).
+3. They issue `MembershipProof` entries on the DHT, signed with their Holochain keys.
+4. Attestations reference these membership proofs by hash.
+5. Validation checks the membership proof exists and was signed by a root authority.
+6. Verification checks the root authority is still trusted.
 
-**The open question:** Whether this yields admissible evidence in the relevant forum (English law + LMAA for bunkers; US federal/state aviation law for parts). The code provides the *mechanism*; a lawyer must still answer the *admissibility* question. SPEC.md flags this correctly as blocking.
+**The bootstrap problem is real.** Someone must install the DNA with root authority pubkeys. That someone is a centralization point. The DNA is open-source and auditable, but the install-time configuration is not trustless.
 
----
+**Alternative paths:**
+- Each jurisdiction runs its own DNA with its own root authorities (FAA DNA, EASA DNA).
+- A coalition secretariat acts as the initial root authority, with a published multi-sig handoff plan.
+- Web-of-trust: members vouch for each other, but this has sybil risks and does not solve the bootstrap.
 
-## 7. Key Rotation → Long-Lived Records
-
-**The problem:** An aircraft part flies for 30 years. The repair station that certified it may have rotated keys five times. How does a stranger verify a signature from a dead key?
-
-**Holochain's answer:** The `KeyRotation` entry type. An agent can publish a rotation attestation, signed by their old key (proving continuity) or by their accrediting body (proving authority). The validation rules ensure that the new key is linked to the old key's history. A verifier follows the chain: attestation → old key → rotation record → new key → current accreditation.
-
-This is the aviation equivalent of certificate chain validation, but without a central CA. The accrediting body (FAA, EASA) is the root of trust; the agent's source chain is the intermediate chain.
-
----
-
-## 8. Immutable Attestations + Counter-Attestations → Records Are Not Inspections
-
-**The problem:** A real officer can sign a real document with a real signature and still be wrong. No cryptography fixes this.
-
-**Holochain's answer:** Attestations are **immutable** (updates and deletes are rejected by validation rules). If a signer made a mistake, they cannot edit it. They must issue a new attestation with a corrected predecessor link, or the counterparty must issue a counter-attestation recording the disagreement. The historical record is preserved exactly as it was.
-
-This aligns with SPEC.md §2: "A format can scope and timestamp a claim; it cannot make it true." The immutability ensures that the scope is **honest** — neither party can widen it later.
+The architecture does not claim to solve the bootstrap. It claims to make the bootstrap **transparent and auditable** — which is more than a closed platform offers.
 
 ---
 
-## Architecture Diagram
+## Competition Law: What the Architecture Does Not Claim
+
+**Deleted claim:** "No owner = no competition issue."
+
+**The truth:** A group of competitors using shared ejection rules may still be a concerted refusal to deal, regardless of architecture. The README is explicit: "Routing it through a neutral third party does not cure that."
+
+**What the architecture provides:**
+- Ejection grounds are objective, published in advance, and checkable by anyone (the DNA is open-source).
+- There is no discretionary override.
+- The ejection record carries evidence that any peer can independently verify.
+
+**What the architecture does NOT provide:**
+- Legal immunity from competition law.
+- A guarantee that courts will view this differently from a traditional trust list.
+
+The legal form (foundation, cooperative, or other) and the ejection rule design must both be reviewed by a competition lawyer. The code is a necessary condition, not a sufficient one.
+
+---
+
+## What Holochain Actually Buys
+
+| Property | Before (Email/PDF) | After (Holochain) |
+|---|---|---|
+| **Local-first issuance** | Requires connectivity to sign | Source chain works offline |
+| **Tamper-evidence** | PDF can be edited | Source chain is cryptographically integrity-protected |
+| **Discoverability** | Must contact issuer | DHT makes records findable by strangers |
+| **Redundancy** | Single point of failure (issuer's server) | DHT stores redundantly across peers |
+| **Rules auditability** | Proprietary platform | DNA is open-source code |
+| **Trust anchor** | Brand trust (VPS, Intertek) | Root authority membrane proofs (with bootstrap caveat) |
+| **Ejection enforcement** | None | Verification-time checks (not retroactive) |
+
+**What it does NOT buy:**
+- Automatic trust (verifiers still judge).
+- Retroactive invalidation (ejection is read-time only).
+- Competition law compliance (needs lawyer review).
+- FAA integration (needs bootstrap).
+
+---
+
+## Architecture Diagram (Revised)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           AVIATION ECOSYSTEM                             │
+│                    VALIDATION (Publish Time) — DETERMINISTIC             │
 │                                                                          │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌──────────┐  │
-│  │   Repair    │    │   Airline   │    │    OEM      │    │   MRO    │  │
-│  │  Station    │    │             │    │             │    │          │  │
-│  │  (Wichita)  │    │  (Singapore)│    │   (Toulouse)│    │ (London) │  │
-│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    └────┬─────┘  │
-│         │                  │                  │                │        │
-│         │  Source Chain    │  Source Chain    │  Source Chain  │        │
-│         │  (local ledger)  │  (local ledger)  │  (local ledger)│        │
-│         │                  │                  │                │        │
-│         └──────────────────┴──────────────────┴────────────────┘        │
-│                            │                                           │
-│                            ▼                                           │
-│                    ┌───────────────┐                                   │
-│                    │     DHT       │  ← Shared data space              │
-│                    │  (gossiped)   │     No single point of failure    │
-│                    └───────────────┘                                   │
-│                            │                                           │
-│         ┌──────────────────┼──────────────────┐                        │
-│         ▼                  ▼                  ▼                        │
-│    ┌─────────┐       ┌─────────┐       ┌─────────┐                    │
-│    │Stranger │       │ Surveyor│       │  Court  │                    │
-│    │(verify) │       │(verify) │       │(verify) │                    │
-│    └─────────┘       └─────────┘       └─────────┘                    │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐               │
+│   │  Signature  │────▶│  Structure  │────▶│  References │               │
+│   │   valid?    │     │   valid?    │     │  exist via  │               │
+│   └─────────────┘     └─────────────┘     │must_get_*?  │               │
+│                                           └─────────────┘               │
+│   → All peers agree. Entry enters DHT.                                  │
+│   → Does NOT check: ejection, membership authority, semantic chain.     │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         DHT (Shared Data Space)                          │
 │                                                                          │
-│  DNA = The Rules (open source, auditable, no operator)                   │
-│  Membrane Proof = FAA/EASA cert (existing accreditation)                 │
-│  Validation = Every peer runs the same code                              │
+│   Attestations │ MembershipProofs │ EjectionRecords │ CounterAttestations│
+│   (anyone can  │ (root authority  │ (root authority │ (any member can    │
+│    publish)    │  signed only)    │  signed only)   │  publish)          │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  VERIFICATION (Read Time) — NON-DETERMINISTIC            │
+│                                                                          │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐               │
+│   │  Membership │────▶│  Ejection   │────▶│ Predecessor │               │
+│   │  authority  │     │   status    │     │    chain    │               │
+│   │  check      │     │  (DHT query)│     │  (DHT query)│               │
+│   └─────────────┘     └─────────────┘     └─────────────┘               │
+│   → Stranger applies own trust judgement.                               │
+│   → Different verifiers may see different DHT states.                   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Why Not Blockchain?
+## Next Steps (Revised)
 
-| Concern | Blockchain | Holochain |
-|---|---|---|
-| **Operator** | Validator set must be chosen by someone | No validator set; agents validate their own data |
-| **Competition law** | Consortium blockchain = shared infrastructure run by competitors | DNA is open-source code; no shared infrastructure to run |
-| **Scalability** | Global consensus limits throughput | No global consensus; scales with participants |
-| **Cost per tx** | Gas fees or infrastructure costs | Zero marginal cost |
-| **Offline** | Must reach consensus; offline signing is complex | Local-first; countersigning works offline |
-| **Longevity** | Chain must be maintained forever | DHT is self-healing; data persists as long as peers care |
-| **Key rotation** | Complex on-chain governance | Native via source chain + DHT entries |
-
----
-
-## Why Not a Central Registry?
-
-| Concern | Central Registry | Holochain |
-|---|---|---|
-| **Owner** | Someone must own it (Airbus? Boeing? FAA?) | No owner; DNA is the rulebook |
-| **Competition law** | Owner is a participant or regulator | No owner = no competition issue |
-| **Longevity** | Server must stay alive for 30 years | DHT persists without any single server |
-| **Global scope** | FAA registry ≠ EASA registry ≠ CAAC registry | One DHT, multi-jurisdiction membrane proofs |
-| **Permission** | Must ask to join | Download DNA, present membrane proof, join |
-
----
-
-## The One Thing This Does Not Solve
-
-**Admissibility.** The code provides a mechanism for stranger-verifiable, timestamped, scoped attestations with historical membership checks. Whether an English court or a US administrative law judge would admit this as evidence is a **legal question**, not a technical one. SPEC.md flags this correctly:
-
-> "Open, and it blocks the build: whether peer validation plus a qualified timestamp yields admissible evidence in the relevant forum. Get a lawyer's answer before writing code."
-
-The code is written. The lawyer's answer is still needed.
-
----
-
-## Next Steps
-
-1. **Legal review** of the anchoring pattern (peer validation + qualified timestamp) for admissibility in US federal aviation proceedings and English arbitration.
-2. **Download the coalition's Sept 2025 progress report** to check if #9 has acquired an owner.
-3. **Find the two parties:** One repair station and one airline willing to countersign a test attestation.
-4. **Build a minimal UI** that lets a repair station issue an attestation and an airline countersign it, with stranger verification.
-5. **Do not buy ATA Spec 42 yet.** The demonstration does not depend on it. The trust anchor gap is what this architecture addresses, and Spec 42 describes the incumbent trust anchor that has already failed to solve the cross-company, decades-long case.
+1. **Legal review** of the anchoring pattern AND the ejection rule design for competition law.
+2. **Bootstrap design:** Who are the initial root authorities? How do they verify FAA/EASA certs? What is the handoff plan?
+3. **Download coalition Sept 2025 progress report** to check if #9 has an owner.
+4. **Find two parties:** One repair station and one airline willing to test peer-to-peer attestation exchange.
+5. **Build minimal UI:** Issue attestation locally, export as file/QR, import and verify locally.
+6. **Do not buy ATA Spec 42.** The demonstration does not depend on it.
