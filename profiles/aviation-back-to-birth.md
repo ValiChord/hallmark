@@ -129,4 +129,6 @@ Two consequences follow, and both are ours to address:
 
 The data element definitions and block structure, and the two certificate-expiry approaches in
 detail. Also ATA Spec 42, referenced throughout for certificate assurance levels and PKI procedure -
-**that is where the trust anchor lives, and it is a separate licensed document we do not have.**
+**that is where the trust anchor lives. It is a separate licensed document, priced at ~$400, and we do not have it. DO NOT BUY IT until a working demonstration exists - see the note below.**
+
+**On not buying Spec 42 yet:** the demonstration does not depend on it. Spec 42 describes the INCUMBENT trust anchor - what we would be offering an alternative to - not the mechanism we are building. And Recommendation #9 existing at all is evidence that whatever Spec 42 specifies does not answer the cross-company, decades-long case. Note also the irony worth using: **if the rules of the trust anchor cost $400 to read, then "checkable by a stranger" has already failed at the documentation layer.**
