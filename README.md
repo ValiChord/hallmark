@@ -181,9 +181,7 @@ Marine fuel retains the sharper documented gap and a real forcing function in it
 
 - **The name.** "Release Attestation Format" is a placeholder.
 - **The beachhead.** Pending the coalition's September 2025 progress report, which is email-gated.
-- **The licence.** A specification wants a permissive licence that allows independent
-  implementation — Apache-2.0 or CC BY 4.0 are the obvious candidates. Not yet chosen, so no LICENSE
-  file is present. Choose before publishing anything externally.
+- **The licence.** ALL RIGHTS RESERVED
 - **The legal form.** Foundation or co-operative, before it matters. You cannot be both a participant
   and the registrar.
 
