@@ -10,6 +10,25 @@ server that has to stay alive for a record to remain checkable.
 
 ---
 
+## Run the demo
+
+```bash
+cd demo && npm install && npm run dev
+```
+
+Then open the address it prints. Load the sample network, run **Inspect, then overhaul**,
+then **Conflicting inspection**, and watch the Verify tab.
+
+The moment worth looking at is a verification report reading **Not currently trusted**
+beside **Historically valid** — the attestation *was* good when it was made, and the
+accreditation behind it has *since* been revoked. Two separate facts, which is the whole
+argument of this repository.
+
+The rules run in the browser; the Rust zome they mirror is in `demo/zomes` and is readable
+in-app under **Zome source**. The zomes compile to wasm — see `demo/zomes/BUILD.md` — but
+have never been run in a conductor, and the DNA cannot be installed until real root
+authority keys are set (that is the bootstrap problem, not a build step).
+
 ## The problem
 
 Digital signatures are solved. Every industry we surveyed already has a signing standard, and most
@@ -163,6 +182,9 @@ Stated plainly so they can be watched for.
 | `profiles/bunker-sample-seal.md` | Marine fuel profile — the worked example |
 | `profiles/aviation-back-to-birth.md` | Aviation parts profile — sketch |
 | `research/` | The evidence base. `00-head-to-head.md` is the synthesis; `01`–`06` are raw sweeps with sources |
+| `demo/` | The RAF Workbench — the rules running in a browser, with the Rust readable in-app |
+| `demo/zomes/` | The Holochain zome. Compiles to wasm; see `BUILD.md` for the two required cargo flags |
+| `reviews/` | Reviews of contributed drafts, most recent last |
 
 **Read `research/00-head-to-head.md` before making any decision from this repo.** It contains the
 figures that turned out to be dead, and the arguments that did not survive verification.

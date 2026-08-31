@@ -1,0 +1,30 @@
+manifest_version: "1"
+name: aviation_provenance
+
+integrity:
+  network_seed: null
+  # Properties are YAML that deserializes into DnaProperties.
+  # initial_members MUST be AgentPubKeyB64 strings (uhCAk...), not raw AgentPubKey bytes.
+  # Replace the placeholders at install time with the root authorities' public keys.
+  properties:
+    initial_members: []
+    max_delegation_depth: 2
+    # 365 days in microseconds
+    max_membership_ttl_micros: 31536000000000
+    assertion_vocabulary:
+      - OVERHAULED
+      - INSPECTED
+      - MODIFIED
+      - REPAIRED
+      - PROTOTYPE
+      - LIFE_LIMITED_SCRAP
+  zomes:
+    - name: aviation_attestation_integrity
+      bundled: "../target/wasm32-unknown-unknown/release/aviation_attestation_integrity.wasm"
+
+coordinator:
+  zomes:
+    - name: aviation_attestation_coordinator
+      bundled: "../target/wasm32-unknown-unknown/release/aviation_attestation_coordinator.wasm"
+      dependencies:
+        - name: aviation_attestation_integrity

@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = ["crates/integrity", "crates/coordinator"]
+
+[workspace.dependencies]
+hdi = "=0.8.0"
+hdk = "=0.7.0"
+serde = { version = "1.0", features = ["derive"] }
+# The hdk_entry_helper / hdk_entry_types derive macros expand to absolute
+# `holochain_serialized_bytes::` paths, so it must be a direct dependency of any
+# crate that uses them — hdi depending on it is not enough.
+holochain_serialized_bytes = "=0.0.57"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1

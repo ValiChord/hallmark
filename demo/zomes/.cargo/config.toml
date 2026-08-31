@@ -1,0 +1,16 @@
+# Two flags are required to build a Holochain zome for wasm32-unknown-unknown:
+#
+# 1. getrandom_backend="custom" — hdk 0.7 registers a custom getrandom v0.3
+#    backend (`__getrandom_v03_custom`, hdk/src/lib.rs) that routes randomness
+#    through the Holochain host. getrandom 0.3 only uses it when this cfg is set;
+#    without it the build fails with "wasm32-unknown-unknown ... not supported".
+#
+# 2. --allow-undefined — the `__hc__*` host functions (dna_info, zome_info,
+#    trace, …) are supplied by the conductor at instantiation, so they are
+#    undefined at link time and must be emitted as wasm imports rather than
+#    treated as link errors.
+[target.wasm32-unknown-unknown]
+rustflags = [
+  '--cfg', 'getrandom_backend="custom"',
+  '-C', 'link-arg=--allow-undefined',
+]

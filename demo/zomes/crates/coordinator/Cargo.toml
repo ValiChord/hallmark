@@ -1,0 +1,14 @@
+[package]
+name = "aviation_attestation_coordinator"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+name = "aviation_attestation_coordinator"
+
+[dependencies]
+hdk = { workspace = true }
+serde = { workspace = true }
+holochain_serialized_bytes = { workspace = true }
+aviation_attestation_integrity = { path = "../integrity" }
