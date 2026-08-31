@@ -61,6 +61,16 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "ledger", label: "Ledger" },
 ];
 
+/**
+ * Block 11 terms belonging to THIS path. The DNA vocabulary covers both paths,
+ * because both live on one network — but a return-to-service form must not
+ * offer NEW, PROTOTYPE or USED, which are the airworthiness path (FAA Order
+ * 8130.21J s4-1(k)). Offering them here would contradict the page.
+ */
+const RETURN_TO_SERVICE_STATUS = ASSERTION_VOCABULARY.filter(
+  (a) => !(["NEW", "PROTOTYPE", "USED"] as readonly string[]).includes(a),
+);
+
 /** One plain sentence per tab. Nobody should have to guess what a screen is for. */
 const TAB_BLURBS: Record<Tab, string> = {
   issue:
@@ -129,12 +139,20 @@ export function Workbench() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <p className="font-mono text-[11px] tracking-[0.18em] text-primary uppercase">
-              RAF {RAF_VERSION}
+              FAA Form 8130-3 · blocks 14a–14e
             </p>
-            <h1 className="text-xl font-medium tracking-tight sm:text-2xl">Workbench</h1>
+            <h1 className="text-xl font-medium tracking-tight sm:text-2xl">
+              Approval for return to service
+            </h1>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Repair Attestation Framework. Membership is a time-bounded capability.
-              Revocation is a separate record — verify, don't invent a notary.
+              A repair station releasing a part it has worked on. Governed by AC 43-9, under
+              14 CFR part 43.
+            </p>
+            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+              <span className="text-fg">There are two forms, on two pages.</span> A part is also
+              certified when it is manufactured — that is the{" "}
+              <span className="text-fg">airworthiness form</span>, blocks 13a–13e, and it is where
+              a chain begins. Same document, different rules, different signer.
             </p>
             <p className="mt-2 max-w-xl text-sm">
               <span className="font-medium text-fg">
@@ -152,7 +170,7 @@ export function Workbench() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link to="/airworthiness">Other path</Link>
+              <Link to="/airworthiness">Airworthiness form</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/source">Zome source</Link>
@@ -357,8 +375,8 @@ export function Workbench() {
                   <span className="text-fg">two entirely different uses</span> — one for a part
                   being manufactured, one for a part being maintained — governed by different rules
                   and signed by different people. This page is the maintenance one. The other is
-                  under <span className="text-fg">Other path</span>, and it is where a chain
-                  begins.
+                  under <span className="text-fg">Airworthiness form</span>, and it is where a
+                  chain begins.
                 </p>
                   </>
                 ) : null}
@@ -713,7 +731,7 @@ function AttestForm({
         </Field>
         <Field label="Status / work · Block 11">
           <select className={selectClass} value={assertion} onChange={(e) => setAssertion(e.target.value)}>
-            {ASSERTION_VOCABULARY.map((a) => (
+            {RETURN_TO_SERVICE_STATUS.map((a) => (
               <option key={a}>{a}</option>
             ))}
           </select>
@@ -742,7 +760,7 @@ function AttestForm({
       </div>
       <Field label="Not observed — what the signer did NOT witness">
         <div className="flex flex-wrap gap-2">
-          {ASSERTION_VOCABULARY.filter((a) => a !== assertion).map((a) => {
+          {RETURN_TO_SERVICE_STATUS.filter((a) => a !== assertion).map((a) => {
             const on = notObserved.includes(a);
             return (
               <button

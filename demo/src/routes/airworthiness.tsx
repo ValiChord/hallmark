@@ -75,7 +75,7 @@ function AirworthinessPage() {
             </h1>
           </div>
           <Button asChild variant="outline" size="sm">
-            <Link to="/">Back to the Workbench</Link>
+            <Link to="/">Return to service form</Link>
           </Button>
         </div>
       </header>
@@ -83,10 +83,11 @@ function AirworthinessPage() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6">
         <section className="rounded-xl bg-surface p-5 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            <span className="text-fg">A manufacturer releasing a part it made.</span> This is where
+            <span className="text-fg">A manufacturer releasing a part it made.</span> Governed by
+            FAA Order 8130.21J. This is where
             a chain begins: there is no earlier certificate to point at, because nothing came
             before it. Issue one here and it becomes selectable as the predecessor back on the
-            Workbench, which is the maintenance side of the same form.
+            return to service form, which is the maintenance side of the same document.
           </p>
         </section>
 
