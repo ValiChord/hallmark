@@ -1,0 +1,29 @@
+# Render blueprint for the RAF Workbench demo.
+#
+# In Render: New > Blueprint, point it at this repository, and it reads this file.
+# The repository is private, so Render needs GitHub access to the ValiChord org.
+#
+# No conductor is involved. The demo runs the attestation rules in the browser,
+# so this is a plain Node web service and nothing else.
+services:
+  - type: web
+    name: raf-workbench
+    runtime: node
+    plan: free
+    rootDir: demo
+    buildCommand: npm ci && npm run build
+    startCommand: node .output/server/index.mjs
+    envVars:
+      # Build a portable Node server instead of the Vercel preset.
+      - key: SERVER_PRESET
+        value: node-server
+
+      # MUST be set. `authEnabled` is `VITE_AUTH_ENABLED !== "false"`, so leaving
+      # it unset turns sign-in ON and the demo asks a visitor to authenticate
+      # before showing them anything. It is a VITE_ variable, so it is baked in
+      # at build time — setting it only at runtime would be too late.
+      - key: VITE_AUTH_ENABLED
+        value: "false"
+
+      - key: NODE_VERSION
+        value: "22"
