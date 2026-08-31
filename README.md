@@ -1,5 +1,7 @@
 # Hallmark
 
+[![CI](https://github.com/ValiChord/hallmark/actions/workflows/ci.yml/badge.svg)](https://github.com/ValiChord/hallmark/actions/workflows/ci.yml)
+
 **A portable attestation format for aircraft part release certificates, and a joining rule for
 deciding whose signature counts.**
 

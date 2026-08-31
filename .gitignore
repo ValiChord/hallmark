@@ -14,3 +14,5 @@ Thumbs.db
 *.happ
 .hc
 .hc_live_*
+.vercel/
+.output/

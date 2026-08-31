@@ -147,3 +147,37 @@ machinery in `src/lib/`. None of it is used by the RAF demo.
 `npm run test:platform` runs that template's own tests. Several fail here because they read
 `.grok/` files that do not exist outside the workspace. CI does not run them. See
 [`HOW_TO_RUN.md`](HOW_TO_RUN.md).
+
+---
+
+## Putting it somewhere people can reach it
+
+A demo that only runs on your laptop stops existing the moment the meeting ends. Two options,
+both of which are **publishing decisions rather than technical ones** — the repository is
+currently private and all rights reserved.
+
+### A hosted URL
+
+`npm run build` already emits a Vercel preset (`.vercel/output`: a server function plus static
+assets). There is no `index.html` in the static output because TanStack Start renders on the
+server, so a plain static host will not work without converting the app to SPA mode first.
+
+Deploying is one command, against your own account:
+
+```bash
+cd demo
+npx vercel deploy --prebuilt
+```
+
+Nothing in the demo is sensitive — invented companies, invented part numbers, no keys, no
+personal data. But it does put the page on the public internet, so it is your call.
+
+### A public CI badge
+
+The README carries a CI badge. It renders as a live pass/fail link **only if the repository is
+public**, and a green badge covering a conductor test against real Holochain binaries is unusually
+good evidence that something is not a mockup.
+
+Making the repository public is a larger decision than deploying the demo: it also publishes the
+research archive, which names individuals at specific companies, and the licence question is still
+open. Consider publishing the demo alone before considering the repository.
