@@ -1,4 +1,4 @@
-manifest_version: "1"
+manifest_version: "0"
 name: aviation_provenance
 
 integrity:
@@ -20,11 +20,11 @@ integrity:
       - LIFE_LIMITED_SCRAP
   zomes:
     - name: aviation_attestation_integrity
-      bundled: "../target/wasm32-unknown-unknown/release/aviation_attestation_integrity.wasm"
+      path: "target/wasm32-unknown-unknown/release/aviation_attestation_integrity.wasm"
 
 coordinator:
   zomes:
     - name: aviation_attestation_coordinator
-      bundled: "../target/wasm32-unknown-unknown/release/aviation_attestation_coordinator.wasm"
+      path: "target/wasm32-unknown-unknown/release/aviation_attestation_coordinator.wasm"
       dependencies:
         - name: aviation_attestation_integrity

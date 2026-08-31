@@ -8,3 +8,9 @@ Thumbs.db
 # Third-party standards are licensed per-purchaser and must never be committed.
 # ATA Spec 2000 Ch.16 carries the buyer's name and home address on every page.
 *.pdf
+
+# Packed Holochain bundles are build artefacts
+*.dna
+*.happ
+.hc
+.hc_live_*

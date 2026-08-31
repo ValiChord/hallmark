@@ -1,0 +1,12 @@
+manifest_version: "0"
+name: aviation_provenance
+description: "Release Attestation Format — aviation profile"
+roles:
+  - name: aviation
+    provisioning:
+      strategy: create
+      deferred: false
+    dna:
+      path: "aviation_provenance.dna"
+      modifiers:
+        network_seed: null

@@ -25,9 +25,10 @@ accreditation behind it has *since* been revoked. Two separate facts, which is t
 argument of this repository.
 
 The rules run in the browser; the Rust zome they mirror is in `demo/zomes` and is readable
-in-app under **Zome source**. The zomes compile to wasm — see `demo/zomes/BUILD.md` — but
-have never been run in a conductor, and the DNA cannot be installed until real root
-authority keys are set (that is the bootstrap problem, not a build step).
+in-app under **Zome source**. The zomes compile to wasm, pack into a hApp, and
+install into a real Holochain conductor, passing an end-to-end smoke test: a root
+authority accredits a repair station, a non-root is rejected, and a third party verifies
+the result. The trust anchor is supplied at install time, not compiled in.
 
 ## The problem
 
