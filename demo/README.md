@@ -158,19 +158,67 @@ currently private and all rights reserved.
 
 ### A hosted URL
 
-`npm run build` already emits a Vercel preset (`.vercel/output`: a server function plus static
-assets). There is no `index.html` in the static output because TanStack Start renders on the
-server, so a plain static host will not work without converting the app to SPA mode first.
-
-Deploying is one command, against your own account:
+This app renders on the server — there is no `index.html` in the build output — so it needs a
+Node process, not a static host. The deploy target is set by `SERVER_PRESET`, defaulting to
+Vercel:
 
 ```bash
-cd demo
-npx vercel deploy --prebuilt
+npm run build                              # Vercel preset -> .vercel/output
+SERVER_PRESET=node-server npm run build    # plain Node   -> .output
 ```
 
-Nothing in the demo is sensitive — invented companies, invented part numbers, no keys, no
-personal data. But it does put the page on the public internet, so it is your call.
+The Node build has been verified to run and serve:
+
+```bash
+SERVER_PRESET=node-server npm run build
+PORT=8099 node .output/server/index.mjs
+```
+
+Nothing in the demo is sensitive — invented companies, invented part numbers, no keys, no personal
+data. Publishing it is still a decision, but a small one.
+
+#### Render
+
+The path of least resistance if you already have an account. Create a **Web Service** from the
+repository with:
+
+| Setting | Value |
+|---|---|
+| Root directory | `demo` |
+| Build command | `npm ci && SERVER_PRESET=node-server npm run build` |
+| Start command | `node .output/server/index.mjs` |
+
+Render sets `PORT` and the server honours it. HTTPS and a URL come free.
+
+⚠️ **The free tier sleeps after inactivity**, so the first visit after a quiet spell takes the best
+part of a minute. That is fine while you are testing and bad the day you send the link to someone
+who matters — they will assume it is broken. Either keep it warm or pay for the always-on tier
+before that email goes out.
+
+#### Oracle Cloud (an always-free VM)
+
+Free forever and never sleeps, which is exactly the weakness of Render's free tier. The cost is
+that you are running a server rather than pushing a build.
+
+Roughly: provision an Ampere A1 instance, install Node, build, run
+`node .output/server/index.mjs` under systemd, and put Caddy or nginx in front for TLS.
+
+Two traps specific to Oracle, both of which have cost people entire evenings:
+
+1. **Opening the port takes two steps, not one.** The VCN security list *and* the instance's own
+   iptables rules. Oracle's images ship with local firewall rules that block everything, so the
+   security list alone leaves you staring at a timeout.
+2. **Ampere capacity is frequently unavailable** in a given region — "out of host capacity" is a
+   common experience on the free tier.
+
+#### Which to use
+
+**Render first.** It is minutes rather than an afternoon, and you already know it. If the cold
+start turns out to matter, that is the moment to either pay for always-on or move to Oracle — and
+by then you will know whether anyone actually clicks the link.
+
+Standing up infrastructure before you know that is the same 80%-engineering mistake this project is
+supposed to be avoiding.
 
 ### A public CI badge
 
