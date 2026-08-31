@@ -139,3 +139,64 @@ jobs:
         if: failure()
         working-directory: demo/zomes
         run: tail -100 conductor.log || true
+
+  network:
+    name: two conductors, one DHT
+    runs-on: ubuntu-latest
+    needs: [rust]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: zome-wasm
+          path: demo/zomes/target/wasm32-unknown-unknown/release
+
+      - name: Fetch holochain 0.7.0 binaries
+        run: |
+          mkdir -p "$HOME/hc-bin"
+          cd "$HOME/hc-bin"
+          base=https://github.com/holochain/holochain/releases/download/holochain-0.7.0
+          curl -fsSL -o hc "$base/hc-x86_64-unknown-linux-gnu"
+          curl -fsSL -o holochain "$base/holochain-x86_64-unknown-linux-gnu"
+          chmod +x hc holochain
+          echo "$HOME/hc-bin" >> "$GITHUB_PATH"
+
+      - name: Pack the DNA and hApp
+        working-directory: demo/zomes
+        run: |
+          hc dna pack .
+          hc app pack .
+
+      - name: Install the Holochain client
+        working-directory: demo
+        run: npm install --no-save @holochain/client@^0.21.0
+
+      - name: Start two sandbox conductors
+        working-directory: demo/zomes
+        run: |
+          echo "ci-passphrase" | hc sandbox --piped -f 9000,9001 create -n 2 --in-process-lair
+          echo "ci-passphrase" | hc sandbox --piped -f 9000,9001 run --all > network.log 2>&1 &
+          for i in $(seq 1 90); do
+            [ "$(grep -c 'Conductor launched' network.log 2>/dev/null || echo 0)" -ge 2 ] && break
+            sleep 2
+          done
+          grep -c "Conductor launched" network.log
+          [ "$(grep -c 'Conductor launched' network.log)" -ge 2 ] || { echo "conductors did not both start"; cat network.log; exit 1; }
+
+      # Proves what a single conductor cannot: gossip between independent nodes,
+      # and a third party verifying a record without contacting its author.
+      - name: Two-conductor gossip test
+        working-directory: demo
+        env:
+          GOSSIP_TIMEOUT_MS: "240000"
+        run: node zomes/tests/network-gossip.mjs
+
+      - name: Conductor log on failure
+        if: failure()
+        working-directory: demo/zomes
+        run: tail -150 network.log || true
