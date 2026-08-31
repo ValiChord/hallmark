@@ -3,6 +3,21 @@ export const RAF_VERSION = "0.1";
 export const BINDS_FIELDS = ["serial_number", "part_number", "serial_and_part"] as const;
 export type BindsField = (typeof BINDS_FIELDS)[number];
 
+/**
+ * Status/work terms, the Block 11 field on FAA Form 8130-3.
+ *
+ * ⚠️ PROVISIONAL. FAA Order 8130.21J §4-1(k) defines Block 11 for the *airworthiness
+ * approval* path as exactly three terms — NEW, PROTOTYPE, USED. The *return to service*
+ * path this demo models is governed by AC 43-9 instead, where INSPECTED and TESTED are
+ * documented (FAA 8130-3 Q&A, Q32: "the term entered in block 11 should reflect the
+ * majority of the work performed").
+ *
+ * So this list mixes real terms from both paths with plausible ones. OVERHAULED, REPAIRED
+ * and MODIFIED are ordinary maintenance language but are not enumerated in 8130.21J;
+ * LIFE_LIMITED_SCRAP is ours. The real vocabulary has to be settled with airworthiness
+ * practitioners against AC 43-9 — it is the largest piece of domain work outstanding, and
+ * it is deliberately visible here rather than buried.
+ */
 export const ASSERTION_VOCABULARY = [
   "OVERHAULED",
   "INSPECTED",

@@ -24,8 +24,8 @@ it has since been withdrawn. Two separate facts, which is the entire argument.
 ## The gap
 
 Digital signatures are solved. Aviation has had legally valid electronic release certificates
-since **2009**, and the first electronic 8130-3 was issued in **October 2025** — a sixteen-year
-gap between legal and used.
+since **2009**, and the first electronic 8130-3 was issued in **October 2025** — a Boeing 737
+battery to Southwest, sixteen years after the standard became usable.
 
 What is not solved is the question one layer up:
 
@@ -41,11 +41,20 @@ Database of Back-to-Birth Parts Documentation."** Marked long term. **Owned by n
 1 September 2026. None of them can hold it, because each competes with the others whose parts
 would flow through it.
 
+> *Checkable:* the coalition's own recommendation listing names no owner for #9; its 25 September
+> 2025 progress report covers only the five short-term recommendations and is silent on #9; and the
+> coalition has published nothing at all in 2026. The report is email-gated — **getting it and
+> confirming this is the single highest-value check anyone can run on this project.**
+
 **Once as a refusal.** ATA Spec 2000 Chapter 16 already defines the electronic release certificate
 and, importantly, already chains: each new certificate references the previous one for that part
 and carries it along with its signature intact. But the specification states that it does not
 cover the internal processes companies use **to authorise the users or signers of that data** —
 reasonably, since those are company-specific.
+
+> *Checkable:* ATA Spec 2000, *Authorized Release Certificate*, Chapter 16, Revision 2019.1,
+> §16-2 1.2 "Scope". Listed at $0.00 on the A4A publications site, though obtaining it is not
+> frictionless. The chaining rule is in §16-2 2.1.
 
 Read those together. The standard defines how a signed certificate travels and how it chains. It
 declines to say **who is entitled to sign one**. That is the trust list problem, named by the

@@ -322,6 +322,14 @@ export function Workbench() {
                   </span>{" "}
                   This page is that decision, made checkable.
                 </p>
+                <p>
+                  <span className="text-fg">Who runs it?</span> Nobody yet — and that is the honest
+                  open question, not a gap in the demo. The root authorities are set when the
+                  network is installed, not compiled into the software, so the same build can run
+                  under the FAA, under EASA, under a coalition secretariat, or under a foundation.
+                  Deciding whose keys those are is a governance question and it has not been
+                  answered.
+                </p>
                 <p className="text-fg">
                   Press <span className="font-medium">Load sample</span>, then run{" "}
                   <span className="font-medium">Inspect, then overhaul</span> — that is ordinary
@@ -613,6 +621,12 @@ function AttestForm({
       <p className="text-sm text-muted-foreground">
         Organisation is copied from membership — you cannot attest as someone else's shop.
       </p>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Fields carry their block numbers on FAA Form 8130-3. This is the{" "}
+        <span className="text-fg">approval for return to service</span> path — blocks 14a–14e,
+        the maintenance case — not the airworthiness approval path in blocks 13a–13e. The
+        organisation in Block 4 comes from the accreditation, not from this form.
+      </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Part type">
           <select
@@ -625,17 +639,17 @@ function AttestForm({
             ))}
           </select>
         </Field>
-        <Field label="Part number">
+        <Field label="Part number · Block 8">
           <input
             className={inputClass}
             value={partNumber}
             onChange={(e) => setPartNumber(e.target.value)}
           />
         </Field>
-        <Field label="Serial">
+        <Field label="Serial number · Block 10">
           <input className={inputClass} value={serial} onChange={(e) => setSerial(e.target.value)} />
         </Field>
-        <Field label="Document">
+        <Field label="Form">
           <select
             className={selectClass}
             value={docType}
@@ -646,7 +660,7 @@ function AttestForm({
             ))}
           </select>
         </Field>
-        <Field label="Document id">
+        <Field label="Form tracking number · Block 3">
           <input className={inputClass} value={docId} onChange={(e) => setDocId(e.target.value)} />
         </Field>
         <Field label="Document digest">
@@ -657,7 +671,7 @@ function AttestForm({
             onChange={(e) => setDigest(e.target.value)}
           />
         </Field>
-        <Field label="Assertion">
+        <Field label="Status / work · Block 11">
           <select className={selectClass} value={assertion} onChange={(e) => setAssertion(e.target.value)}>
             {ASSERTION_VOCABULARY.map((a) => (
               <option key={a}>{a}</option>
@@ -674,7 +688,7 @@ function AttestForm({
             <option value="false">false</option>
           </select>
         </Field>
-        <Field label="Predecessor">
+        <Field label="Previous certificate for this part">
           <select className={selectClass} value={pred} onChange={(e) => setPred(e.target.value)}>
             <option value="">None (genesis document)</option>
             {prior.map((r) => (

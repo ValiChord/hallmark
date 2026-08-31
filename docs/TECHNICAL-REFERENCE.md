@@ -90,6 +90,39 @@ anchor?                qualified_timestamp, timestamp_service_id
 `document_type` covers `Faa81303`, `EasaForm1`, `CasaForm1`, `TccaFormOne`,
 `CertificateOfConformance` and `TransferDocument` — the same set ATA Spec 2000 Chapter 16 carries.
 
+### 4.1.1 Mapping to FAA Form 8130-3
+
+The attestation does not replace the release certificate; it makes a checkable statement about
+one. These are the fields that correspond, with their block numbers on the form.
+
+| Attestation field | 8130-3 | Block name |
+|---|---|---|
+| `binding.document_id` | Block 3 | FAA Form Tracking Number |
+| `attester.organisation` | Block 4 | Organization Name and Address |
+| `subject.description` | Block 7 | Description |
+| `subject.part_number` | Block 8 | Part Number |
+| `subject.serial_number` | Block 10 | Serial Number |
+| `scope.observed` | Block 11 | Status/Work |
+| `binding.predecessor_document_hash` | Block 12 | Remarks — where Chapter 16 records the previous certificate |
+
+**The form has two paths and they are not interchangeable.** Blocks 13a–13e are *Airworthiness
+Approval*; blocks 14a–14e are *Approval for Return to Service*. The maintenance case this project
+models — a repair station releasing a part it has worked on — is the **block 14 path**.
+
+That distinction matters for the vocabulary. FAA Order 8130.21J §4-1(k) governs the block 13 path
+and defines Block 11 as exactly three terms: **NEW**, **PROTOTYPE**, **USED**. The block 14 path is
+governed by **AC 43-9, Maintenance Records** instead, where INSPECTED and TESTED are the documented
+terms (FAA 8130-3 Q&A, Q32).
+
+**Our vocabulary is therefore provisional and mixes both**, plus terms that are ordinary
+maintenance language but appear in neither: OVERHAULED, REPAIRED, MODIFIED. LIFE_LIMITED_SCRAP is
+ours entirely. This is flagged in `demo/src/lib/raf/types.ts` at the definition, so nobody
+mistakes it for settled. Fixing it means reading AC 43-9 with a practitioner, and it is the largest
+piece of domain work outstanding.
+
+*Sources: FAA Order 8130.21J, effective 2025 (§4-1); FAA Form 8130-3 Q&A, Q32. Both are free
+public downloads from faa.gov.*
+
 **`scope` is the load-bearing field.** The failures this format targets are not forgeries. They
 are assertions made wider than what the signer actually observed. `not_observed` lets a signer
 say what they did not witness, so absence is never read as assent. Assertion ids come from a
