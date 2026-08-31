@@ -33,7 +33,7 @@ The rules are running in the browser. The Rust they mirror is readable in-app un
 | `docs/HANDOVER.md` | This file |
 | `docs/RESEARCH-ARCHIVE.md` | The market research that chose aviation. Historical, unmaintained |
 | `docs/CODE-REVIEW-ARCHIVE.md` | Reviews of earlier drafts. Historical; explains why the design is shaped this way |
-| `demo/` | The RAF Workbench — a browser app that runs the rules with no conductor |
+| `demo/` | The RAF Workbench. **`demo/README.md` explains what each screen does and how it maps to the zome** |
 | `demo/src/lib/raf/` | The TypeScript engine: `types`, `validate`, `verify`, `engine` |
 | `demo/zomes/` | The Holochain zome (Rust), `integrity` and `coordinator` crates |
 | `demo/zomes/tests/` | The end-to-end conductor smoke test |

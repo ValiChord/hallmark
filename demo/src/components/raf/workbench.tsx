@@ -60,6 +60,20 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "ledger", label: "Ledger" },
 ];
 
+/** One plain sentence per tab. Nobody should have to guess what a screen is for. */
+const TAB_BLURBS: Record<Tab, string> = {
+  issue:
+    "Grant an accreditation, with an expiry date. Nobody can sign anything without one, and only a root authority or an OEM can hand them out.",
+  attest:
+    "Sign a statement about a part: what you did to it, and — just as importantly — what you did not check.",
+  revoke:
+    "Withdraw an accreditation, citing evidence any other party can fetch and check for themselves.",
+  verify:
+    "Check a certificate the way a stranger would, years later, without contacting whoever signed it. This is the point of the whole exercise.",
+  ledger:
+    "Everything that was accepted, and every attempt that was refused. Rejected records never enter the shared space at all.",
+};
+
 function flash(result: EngineResult<{ hash: string }>): string {
   return result.ok ? `Committed ${result.value.hash}` : result.reason;
 }
@@ -75,6 +89,7 @@ export function Workbench() {
   const [banner, setBanner] = useState<string | null>(null);
   const [bannerOk, setBannerOk] = useState(true);
   const [hydrated, setHydrated] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => setHydrated(true), []);
 
@@ -282,6 +297,42 @@ export function Workbench() {
             </div>
           ) : null}
 
+          {showIntro ? (
+            <section className="mb-4 rounded-xl bg-surface p-5 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <h2 className="text-base font-medium">What you are looking at</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowIntro(false)}
+                  className="shrink-0 text-xs text-muted-foreground underline underline-offset-4 hover:text-fg"
+                >
+                  Hide
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
+                <p>
+                  A repair shop signs a certificate saying what it did to an aircraft part. Years
+                  later somebody — a buyer, an auditor, a court — needs to know whether that
+                  signature counted. The shop may have changed hands. It may not exist.
+                </p>
+                <p>
+                  Signing is the easy part and the industry solved it long ago.{" "}
+                  <span className="text-fg">
+                    What nobody has solved is who decides whose signature counts.
+                  </span>{" "}
+                  This page is that decision, made checkable.
+                </p>
+                <p className="text-fg">
+                  Press <span className="font-medium">Load sample</span>, then run{" "}
+                  <span className="font-medium">Inspect, then overhaul</span> — that is ordinary
+                  work. Then run <span className="font-medium">Conflicting inspection</span>, where
+                  the shop says two opposite things about the same part, and watch the verdict on
+                  the earlier certificate change.
+                </p>
+              </div>
+            </section>
+          ) : null}
+
           <div className="mb-4 flex gap-1 overflow-x-auto rounded-lg bg-surface p-1 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
             {TABS.map((t) => (
               <button
@@ -297,6 +348,10 @@ export function Workbench() {
               </button>
             ))}
           </div>
+
+          <p className="mb-4 px-1 text-sm leading-relaxed text-muted-foreground">
+            {TAB_BLURBS[tab]}
+          </p>
 
           {tab === "issue" && actor ? (
             <IssueForm
@@ -866,6 +921,23 @@ function VerifyTab({ state, actor }: { state: EngineState; actor?: string }) {
   );
 }
 
+/** The verdict in a sentence. The badges say what; this says so what. */
+function verdictSentence(report: VerificationReport): string {
+  if (!report.historicallyValid) {
+    return "This should never have been accepted. Something about it was already wrong at the moment it was signed.";
+  }
+  if (report.currentlyTrusted) {
+    return "This checks out. The signer held a live accreditation when they signed, and nothing behind it has been withdrawn since.";
+  }
+  if (report.revocation.kind === "RevokedAfterAssertion") {
+    return "Genuine when it was signed, but the accreditation behind it has since been withdrawn. The certificate is still a true record of what happened — treat it with caution before relying on it for a new decision.";
+  }
+  if (report.revocation.kind === "RevokedBeforeAssertion") {
+    return "The signer's accreditation had already been withdrawn before they signed this.";
+  }
+  return "Properly signed, but something below means you should not rely on it as it stands.";
+}
+
 function ReportCard({ report }: { report: VerificationReport }) {
   return (
     <div className="rounded-xl bg-surface p-5 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
@@ -881,10 +953,18 @@ function ReportCard({ report }: { report: VerificationReport }) {
           <Badge variant="warn">Not historically valid</Badge>
         )}
       </div>
+      <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+        {verdictSentence(report)}
+      </p>
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
-        <Row label="Binding" ok={report.bindingWellFormed} />
+        <Row
+          label="Binding"
+          hint="Does the part identity match the document?"
+          ok={report.bindingWellFormed}
+        />
         <Row
           label="Membership"
+          hint="Was the signer accredited at the moment they signed?"
           ok={report.membership.kind === "Active"}
           detail={
             report.membership.kind === "Active"
@@ -900,11 +980,13 @@ function ReportCard({ report }: { report: VerificationReport }) {
         />
         <Row
           label="Predecessor"
+          hint="Does this link back correctly to the previous certificate for this part?"
           ok={report.predecessor === "None" || report.predecessor === "Ok"}
           detail={report.predecessor}
         />
         <Row
           label="Revocation"
+          hint="Has the accreditation behind this been withdrawn?"
           ok={report.revocation.kind === "Clean"}
           detail={
             report.revocation.kind === "Clean"
@@ -914,13 +996,19 @@ function ReportCard({ report }: { report: VerificationReport }) {
         />
       </dl>
       {report.scope.length > 0 ? (
-        <ul className="mt-4 flex flex-wrap gap-2">
+        <>
+          <p className="mt-5 mb-2 text-xs text-muted-foreground">
+            What the signer put on the record — both what they checked and what they explicitly did
+            not. Each one has to come from the agreed vocabulary; free text is not an assertion.
+          </p>
+        <ul className="flex flex-wrap gap-2">
           {report.scope.map((s) => (
             <Badge key={s.assertionId} variant={s.inVocabulary ? "ok" : "danger"}>
               {s.assertionId}
             </Badge>
           ))}
         </ul>
+        </>
       ) : null}
       {report.counters.length > 0 ? (
         <div className="mt-4 border-t border-border pt-3">
@@ -940,7 +1028,17 @@ function ReportCard({ report }: { report: VerificationReport }) {
   );
 }
 
-function Row({ label, ok, detail }: { label: string; ok: boolean; detail?: string }) {
+function Row({
+  label,
+  ok,
+  detail,
+  hint,
+}: {
+  label: string;
+  ok: boolean;
+  detail?: string;
+  hint?: string;
+}) {
   return (
     <div className="flex items-start gap-2">
       {ok ? (
@@ -948,9 +1046,10 @@ function Row({ label, ok, detail }: { label: string; ok: boolean; detail?: strin
       ) : (
         <Shield className="mt-0.5 size-4 text-danger" />
       )}
-      <div>
+      <div className="min-w-0">
         <p className="font-medium">{label}</p>
-        {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+        {detail ? <p className="font-mono text-[11px] text-aluminum">{detail}</p> : null}
       </div>
     </div>
   );

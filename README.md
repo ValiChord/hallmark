@@ -160,7 +160,7 @@ need a competition lawyer.
 | `docs/HANDOVER.md` | For an engineer picking this up |
 | `docs/RESEARCH-ARCHIVE.md` | The research that chose aviation. Historical, unmaintained |
 | `docs/CODE-REVIEW-ARCHIVE.md` | Reviews of earlier drafts. Historical |
-| `demo/` | The RAF Workbench — the rules running in a browser |
+| `demo/` | The RAF Workbench — the rules running in a browser. Has its own README |
 | `demo/zomes/` | The Holochain zome, with `BUILD.md` |
 | `docs/superseded-drafts/` | Earlier contributed drafts. Historical, do not build on them |
 | `LICENCE.md` | All rights reserved |
