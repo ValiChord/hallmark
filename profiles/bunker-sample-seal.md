@@ -1,7 +1,11 @@
 # Profile: marine fuel — sample seal binding
 
-**Status: worked example.** The most precisely documented gap found in either domain. Evidence in
-`../research/02-bunker-evidence-chain.md`.
+**Status: NOT being built.** Kept as a record and as a second profile the format should still fit.
+
+Aviation was chosen on 1 September 2026. This domain lost on occupancy — a port authority holds
+the register and the incumbent testing lab holds the customer — not on the quality of the gap,
+which remains the most precisely documented one found anywhere in the research. If aviation
+stalls, start here. Evidence in [`../docs/RESEARCH-ARCHIVE.md`](../docs/RESEARCH-ARCHIVE.md).
 
 ## The gap, exactly
 

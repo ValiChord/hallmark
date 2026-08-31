@@ -1,235 +1,213 @@
-# Release Attestation Format
+# Hallmark
 
-*Working title. The name is an open decision — see [Open decisions](#open-decisions).*
+**A portable attestation format for aircraft part release certificates, and a joining rule for
+deciding whose signature counts.**
 
-A portable format, plus a joining rule, for attestations about physical things: the release
-certificate for an aircraft part, the delivery note and retained sample for a marine fuel bunker.
+A hallmark is a mark struck into an object that binds it to a claim about what it is, applied by
+an independent office, and readable by a stranger centuries later with nobody left alive to ask.
+That is the shape of the problem here.
 
-**This is a specification, not a platform.** There is nothing to sign up to, no operator, and no
-server that has to stay alive for a record to remain checkable.
-
----
-
-## Run the demo
+This is a specification and a demonstration. There is no platform, no operator, and no server that
+has to stay alive for a record to remain checkable.
 
 ```bash
 cd demo && npm install && npm run dev
 ```
 
-Then open the address it prints. Load the sample network, run **Inspect, then overhaul**,
-then **Conflicting inspection**, and watch the Verify tab.
+Load the sample network, run **Inspect, then overhaul**, then **Conflicting inspection**, and
+watch the Verify tab. What you are looking for is a report reading **Not currently trusted** beside
+**Historically valid** — the attestation was good when it was signed, and the accreditation behind
+it has since been withdrawn. Two separate facts, which is the entire argument.
 
-The moment worth looking at is a verification report reading **Not currently trusted**
-beside **Historically valid** — the attestation *was* good when it was made, and the
-accreditation behind it has *since* been revoked. Two separate facts, which is the whole
-argument of this repository.
+---
 
-The rules run in the browser; the Rust zome they mirror is in `demo/zomes` and is readable
-in-app under **Zome source**. The zomes compile to wasm, pack into a hApp, and
-install into a real Holochain conductor, passing an end-to-end smoke test: a root
-authority accredits a repair station, a non-root is rejected, and a third party verifies
-the result. The trust anchor is supplied at install time, not compiled in.
+## The gap
 
-## The problem
+Digital signatures are solved. Aviation has had legally valid electronic release certificates
+since **2009**, and the first electronic 8130-3 was issued in **October 2025** — a sixteen-year
+gap between legal and used.
 
-Digital signatures are solved. Every industry we surveyed already has a signing standard, and most
-have had one for over a decade. Aviation has had legally valid electronic release certificates
-since **2009**.
+What is not solved is the question one layer up:
 
-What none of them has solved is the question one layer up:
+> **Who decides whose signature counts — when every organisation qualified to decide competes with
+> the others, and the answer must be checkable by a stranger, offline, years later?**
 
-> **Who decides whose signature counts — when every organisation qualified to decide is a competitor
-> of the others, and the answer has to be checkable by a stranger, offline, years later?**
+### The industry has written the gap down twice
 
-That is the trust list problem. It is why a signing standard can sit almost unused for sixteen years
-and not be a technology failure.
+**Once as a request.** The Aviation Supply Chain Integrity Coalition — Airbus, Boeing, GE
+Aerospace, Safran, Delta, United, American, and others — issued thirteen unanimous recommendations
+after the AOG Technics forged-parts scandal. **Recommendation #9: "Establish Voluntary Industry
+Database of Back-to-Birth Parts Documentation."** Marked long term. **Owned by nobody**, verified
+1 September 2026. None of them can hold it, because each competes with the others whose parts
+would flow through it.
 
-### It is institutional, not cryptographic
+**Once as a refusal.** ATA Spec 2000 Chapter 16 already defines the electronic release certificate
+and, importantly, already chains: each new certificate references the previous one for that part
+and carries it along with its signature intact. But the specification states that it does not
+cover the internal processes companies use **to authorise the users or signers of that data** —
+reasonably, since those are company-specific.
 
-Every attempt to answer it has needed an operator, and the operator is always someone's rival.
-
-- **Aviation.** The Aviation Supply Chain Integrity Coalition — Airbus, Boeing, GE Aerospace, Safran,
-  Delta, United, American — named a back-to-birth parts documentation database as its
-  **Recommendation #9**, marked it long term, and assigned it to **nobody**. GE cannot run the
-  register that Safran's parts flow through.
-- **Content provenance.** C2PA built the signatures, then had to run a trust list, then **froze it on
-  1 January 2026**.
-- **Steel and materials.** The certifying bodies' own impartiality accreditation forbids any of them
-  holding the registry. Their published method for spotting a forged certificate is *"changes in
-  font, misaligned logos, inconsistent line spacing."*
-
-### The specific thing that is missing
-
-Across both domains we researched in depth, the same gap appears:
-
-> **A checkable binding between a physical artefact and a document, verifiable by a stranger years
-> after the fact.**
-
-- **Marine fuel.** The **sample seal number** is the only thing linking the retained physical sample
-  to the delivery note. It is a *"should"* in IMO guidance (MSC-MEPC.2/Circ.18 §8.2) and is **absent
-  from MARPOL Appendix V entirely**. Gard's own guidance records owners discovering the seal numbers
-  were never written on the note, *"which allows their validity to be disputed."*
-- **Aviation.** Back-to-birth documentation, bound to the part.
-
-Same shape, two industries. That is the argument for one format with two profiles.
+Read those together. The standard defines how a signed certificate travels and how it chains. It
+declines to say **who is entitled to sign one**. That is the trust list problem, named by the
+standard as a deliberate scope exclusion, and asked for by the industry as an unowned
+recommendation.
 
 ### Forgery is not the problem
 
-This matters more than anything else here, because it determines what to build.
+This determines what to build, so it belongs near the top.
 
-Across every documented bunker dispute we read — IMO instruments, two P&I club casebooks, standard
-contract text — **not one turned on a forged signature.** The failures are:
+Across the documented disputes in this domain and in the adjacent marine one, the failures are not
+forged signatures. They are **omission, entitlement, inconsistency, and contractual fiat** — most
+sharply, assertions made wider than what the signer actually observed. A real officer signing a
+real document with a real signature, certifying something they did not witness, defeats every
+signature check ever built.
 
-| Failure mode | Example |
-|---|---|
-| **Omission** | Seal numbers never recorded on the delivery note |
-| **Entitlement** | An officer certifies samples as continuous-drip when they were not |
-| **Inconsistency** | Every sample off-spec except the supplier's, "the authenticity of which was disputed" |
-| **Contractual fiat** | The contract makes the seller's own retained sample the one that gets tested |
-
-**Do not pitch this as anti-forgery.** Verifiable credentials already solve forgery. They do not
-solve any of the above.
+So the format's job is not to prove a signature genuine. It is to make the claim **narrow,
+explicit, and scoped** — including recording what the signer did *not* observe, so absence is
+never read as assent.
 
 ---
 
 ## What this is, and is not
 
-**Is:** a data format, a set of verification rules, and a membership rule expressed as code that
-everyone can run and check.
+**Is:** a data format, verification rules, and a membership rule expressed as code that anyone can
+run and any stranger can audit.
 
-**Is not:** a platform, a registry, a database, a company you route your data through, or a network
-you must join before you get value.
+**Is not:** a platform, a registry, a database, a company you route data through, or a network you
+must join before you get value.
 
 ### Non-goals
 
 - **We do not perform the inspection.** A format can scope, bind and timestamp a claim. It cannot
-  make the claim true. A real signature on a wrong assertion stays wrong. Records are not
-  inspections, and any pitch implying otherwise should be treated as suspect — including ours.
-- **We do not reconstruct history.** Nothing here helps assets already in service with missing
-  paperwork. This only helps things entering service from now on. Say so out loud.
-- **We do not replace the port state or the regulator.** Where a regulator runs the register, work
-  upstream of it and feed it. Never against it.
-- **We do not compete with the physical control.** In marine fuel trials a cheap tamper-evident
-  **lock-and-seal** beat a high-tech DNA tracer on cost. Good. This format *strengthens the seal* by
-  binding its number to the paper, at zero cost per tonne.
+  make the claim true. Records are not inspections, and any pitch implying otherwise should be
+  treated as suspect — including ours.
+- **We do not reconstruct history.** Nothing here helps parts already in service with missing
+  paperwork. It helps parts entering service from now on. That is real, it is probably why nobody
+  has funded it, and it should be said in the first paragraph of any pitch rather than discovered
+  by a sceptic in the second meeting.
+- **We do not replace the regulator.** Where a regulator runs the register, work upstream and feed
+  it.
 
 ---
 
 ## Design constraints
 
-These are not preferences. Each one is a cause of death observed in a real project.
+Not preferences. Each is a cause of death observed in a real project — see
+[`docs/RESEARCH-ARCHIVE.md`](docs/RESEARCH-ARCHIVE.md).
 
 1. **Value at N=2.** Two parties with no third present must get something on day one. Contour died
-   processing 60–70 transactions a month. If the design needs network scale first, it is a graveyard
-   project.
+   processing 60–70 transactions a month.
 2. **A format and a rulebook, never a platform.** If one board meeting can shut it down, it will be.
 3. **The owner cannot be a participant.** TradeLens ran on a decentralised ledger and it made no
-   difference, because the *governance* was owned by Maersk. Neutrality is a legal form, not a data
-   structure.
-4. **Onboarding in an afternoon, without permission.** If it needs a consultant, the ceiling is a few
-   dozen participants.
-5. **Sealable by a qualified trust service.** Peer validation for correctness; a qualified timestamp
-   or seal for legal weight. The record does not need to *be* qualified — it needs to be sealable by
-   something that is. Design for this now, not in year three.
-6. **The ejection rule must be objective, published in advance, and checkable by anyone.** See below.
+   difference, because the *governance* was owned. Neutrality is a legal form, not a data structure.
+4. **Onboarding in an afternoon, without permission.** If it needs a consultant, the ceiling is a
+   few dozen participants.
+5. **Sealable by a qualified trust service.** Peer validation for correctness; a qualified
+   timestamp for legal weight. The record does not need to *be* qualified — it needs to be sealable
+   by something that is.
+6. **The ejection rule must be objective, published in advance, and checkable by anyone.**
 7. **Not W3C Verifiable Credentials.** The EU wallet's recognised formats are IETF SD-JWT VC and
-   ISO/IEC 18013-5 mdoc; the W3C data model "remains on the roadmap". In an EU market that is the
-   losing side of a format war.
-8. **Extend what exists.** The IMO Compendium eBDN data set is free, open, roughly 60 elements, and
-   already carries a sample seal number field. Extend it rather than inventing a parallel vocabulary.
+   ISO/IEC 18013-5 mdoc; the W3C data model "remains on the roadmap".
+8. **Extend what exists.** Chapter 16 already chains. Do not invent a parallel vocabulary.
 
 ### The competition-law constraint
 
-The mechanism that makes this work is that rule-breakers get provably ejected and others stop dealing
-with them. Read that from a competition lawyer's chair: **a group of competitors operating a shared
-list of parties they collectively refuse to trade with is a concerted refusal to deal.**
+The mechanism that makes this work is that rule-breakers are provably revoked and others stop
+relying on them. Read from a competition lawyer's chair: **a group of competitors operating a
+shared list of parties they collectively refuse to deal with is a concerted refusal to deal.**
 
-The precedent that makes it survivable is the certificate-authority ecosystem. Browsers do distrust
-and effectively kill non-compliant certificate authorities, and that is accepted, because the grounds
-are **objective, published in advance, and verifiable by anyone** — *you broke a stated technical
-rule*, not *we don't like you commercially*.
+The precedent that makes it survivable is the certificate-authority ecosystem. Browsers do
+distrust and effectively kill non-compliant certificate authorities, and that is accepted, because
+the grounds are **objective, published in advance, and verifiable by anyone** — *you broke a
+stated technical rule*, not *we don't like you commercially*.
 
-**Design the ejection rule to that standard, or this is a cartel.** This constraint is load-bearing
-and appears again in [SPEC.md](SPEC.md).
+Every evidence-bearing revocation ground in the implementation is checkable by any peer from the
+records alone, with no discretionary override. Two of them exist specifically to stop the rule
+firing on legitimate behaviour. See
+[`docs/TECHNICAL-REFERENCE.md`](docs/TECHNICAL-REFERENCE.md) §5.3.
+
+**This is a necessary condition, not a sufficient one.** The legal form and the rule design both
+need a competition lawyer.
 
 ---
 
 ## What would kill this
 
-Stated plainly so they can be watched for.
-
-- **Recommendation #9 acquires a named owner.** As of 2026-08-27 it has none, and the coalition has
-  published nothing at all in 2026. If an OEM funds a registry and hands it over, the aviation
-  opening closes. *This is the single fact that decides the aviation profile.*
-- **A regulator names a system of record.** MPA Singapore has already done this for bunker delivery
-  notes — mandatory since 1 April 2025, six whitelisted vendors, its own central verification
-  facility. Any bunker pitch must answer *"why not MPA's registry?"* The honest answer is that MPA's
-  register is **port-scoped and does not federate** to Rotterdam, Fujairah or Houston.
-- **An incumbent absorbs it.** BunkerTrace was selling to shipowners in 2020 and was a component
-  inside a testing lab's own product by November 2021. It filed micro-entity accounts every year of
-  its life — including the years it ran trials with bp, Chevron, Hapag-Lloyd and ONE — and went to
-  creditors' liquidation without an administration. **Blue-chip trials are not revenue.**
+- **Recommendation #9 acquires an owner.** As of 1 September 2026 it has none, and the coalition
+  has published nothing in 2026 at all. If an OEM funds a registry and hands it over, the opening
+  closes. *Note the ambiguity honestly: an unowned recommendation in a coalition that has gone
+  quiet may mean nobody wants it, rather than that it is available.*
+- **A regulator names a system of record.** EASA's blockchain study concluded in September 2024
+  that regulators would need to issue guidelines first — they looked and stepped back. That could
+  change.
+- **An incumbent absorbs it.** The closest predecessor in the adjacent marine domain was selling
+  to shipowners in 2020 and was a component inside a testing lab's own product by late 2021. It
+  filed micro-entity accounts every year of its life, including the years it ran trials with
+  blue-chip names, and went to creditors' liquidation. **Blue-chip trials are not revenue.**
 - **The clock.** SWIFT 1973, the barcode 1974, PEPPOL around 2008. Ten to twenty years to critical
   mass is the base rate. If this must work in five, the evidence says it will not.
 
 ---
 
-## Repository layout
+## Repository map
 
 | Path | What it is |
 |---|---|
-| `README.md` | The problem, the constraints, the kill conditions |
-| `SPEC.md` | Draft v0.1 of the core format and verification rules |
-| `profiles/bunker-sample-seal.md` | Marine fuel profile — the worked example |
-| `profiles/aviation-back-to-birth.md` | Aviation parts profile — sketch |
-| `research/` | The evidence base. `00-head-to-head.md` is the synthesis; `01`–`06` are raw sweeps with sources |
-| `demo/` | The RAF Workbench — the rules running in a browser, with the Rust readable in-app |
-| `demo/zomes/` | The Holochain zome. Compiles to wasm; see `BUILD.md` for the two required cargo flags |
-| `reviews/` | Reviews of contributed drafts, most recent last |
-
-**Read `research/00-head-to-head.md` before making any decision from this repo.** It contains the
-figures that turned out to be dead, and the arguments that did not survive verification.
+| `SPEC.md` | The attestation format as a specification, independent of any implementation |
+| `profiles/aviation-back-to-birth.md` | The domain profile being built |
+| `profiles/bunker-sample-seal.md` | A second profile — better researched, not being built |
+| `docs/TECHNICAL-REFERENCE.md` | What the system enforces and where |
+| `docs/HANDOVER.md` | For an engineer picking this up |
+| `docs/RESEARCH-ARCHIVE.md` | The research that chose aviation. Historical, unmaintained |
+| `docs/CODE-REVIEW-ARCHIVE.md` | Reviews of earlier drafts. Historical |
+| `demo/` | The RAF Workbench — the rules running in a browser |
+| `demo/zomes/` | The Holochain zome, with `BUILD.md` |
+| `docs/superseded-drafts/` | Earlier contributed drafts. Historical, do not build on them |
+| `LICENCE.md` | All rights reserved |
 
 ---
 
 ## Status
 
-**A working demonstration; an undecided project.** The format is a draft and the beachhead is
-not chosen. The evidence tilts toward aviation, because its opening is verified open while
-marine fuel is occupied at two levels — the port authority holds the register and the incumbent
-testing lab holds the customer. Marine fuel retains the sharper documented gap and a real
-forcing function in its claim time bars (14 days quantity, 30 days quality).
+**A working demonstration; an undecided venture.**
 
-### What exists and is checked
+### What exists and is checked on every push
 
 - A browser demo anyone can run in two commands.
-- A Holochain zome that compiles, packs, installs into a conductor, and passes an end-to-end
-  test: accreditation, refusal of a non-root, attestation, third-party verification, and
-  revocation that withdraws current trust while preserving historical validity.
+- A Holochain zome that compiles, packs, installs into a conductor, and passes an end-to-end test:
+  accreditation, refusal of a non-root, attestation, third-party verification, and revocation that
+  withdraws current trust while preserving historical validity.
 - A conformance test holding the TypeScript engine and the Rust zome to the same verdicts.
-- CI running all of it, including the conductor test against real holochain binaries.
+- CI running all of it, including the conductor test against real Holochain binaries.
 
-### Open decisions
+### Settled
 
-- **The name.** "Release Attestation Format" is a placeholder.
-- **The beachhead.** Pending the coalition's September 2025 progress report, which is email-gated.
-- **The licence.** ALL RIGHTS RESERVED
-- **The legal form.** Foundation or co-operative, before it matters. You cannot be both a participant
-  and the registrar.
-- **Who holds root keys.** The zome proves the trust anchor can be set per deployment rather than
-  compiled in. It cannot tell you whose keys belong there. That is the bootstrap problem, and it
-  is a governance question.
+- **The domain is aviation parts.** Marine bunker fuel was the alternative and is not being built;
+  the reasoning is in the archive and the profile is kept.
+- **Revocation, not ejection.** An accreditor withdrawing its own accreditation, not competitors
+  collectively refusing to deal.
+- **The trust anchor is set per deployment**, in the install call, not compiled into the build.
+
+### Open
+
+- **The name.** "Hallmark" and "Release Attestation Format" are both working titles.
+- **The licence.** ALL RIGHTS RESERVED. A specification needs a licence that permits independent
+  implementation; this needs deciding before anything is published externally.
+- **The legal form.** Foundation or co-operative, before it matters. You cannot be both a
+  participant and the registrar.
+- **Who holds root keys.** The code proves roots can be configured per deployment. It cannot tell
+  you whose keys belong there. This is the bootstrap problem, and it is a governance question.
 
 ### What still decides whether any of this matters
 
 Code was never the hard part, and having some does not change these.
 
-1. Get the coalition's September 2025 progress report and check whether #9 has an owner.
-2. Get a lawyer's view on the anchoring pattern — peer-validated record plus qualified timestamp. If
-   that does not produce admissible evidence, the whole approach needs rethinking.
-3. Find the two parties. One repair shop and one buyer, or one bunker supplier and one owner. **If
-   you cannot name them, the N=2 test has already failed.**
+1. Get the coalition's September 2025 progress report and find out whether #9 has an owner.
+2. Get a lawyer's view on the anchoring pattern. If a peer-validated record plus a qualified
+   timestamp is not admissible, the approach needs rethinking.
+3. **Name two parties.** One repair shop and one buyer. If you cannot name them, the N=2 test has
+   already failed.
 
 The demonstration exists so those conversations have something to point at. It is not a substitute
 for having them. If the effort on this project is 80% engineering, it matches the profile of every
-corpse in `research/`.
+corpse in the archive.

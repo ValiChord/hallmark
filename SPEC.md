@@ -1,7 +1,8 @@
 # Release Attestation Format — draft v0.1
 
-**Status: draft. Nothing here is stable.** This exists to be argued with, and to force the design
-decisions into the open before any code is written.
+**Status: draft, but no longer speculative.** Most of this is implemented and tested — see §8 for
+what is built and what is not, and `docs/TECHNICAL-REFERENCE.md` for how. The document is kept
+implementation-independent on purpose: it is the thing an outside party would build against.
 
 Terms: **MUST**, **SHOULD**, **MAY** as in RFC 2119.
 
@@ -203,15 +204,27 @@ false"*. Conflating them is how omission failures get laundered into apparent co
 
 ---
 
-## 8. Known-unfinished
+## 8. Status of each part
 
-Listed so nobody mistakes a gap for a decision.
+Listed so nobody mistakes a gap for a decision, or a decision for a gap.
 
-- **Historical membership check (§7 step 4)** — the actual trust list problem, and the least
-  finished part of this document.
-- **Revocation** without an operator or a global order.
-- **Key rotation and long-lived records.** MARPOL requires the delivery note aboard and inspectable
-  for three years; OW Bunker litigation ran nine. Key material outlives no design here.
-- **Assertion vocabularies** — must be built with domain practitioners, not desk research.
-- **Whether the seal-number field in the IMO Compendium eBDN data set is usable as the binding.**
-  Check it before designing a parallel one.
+**Implemented and tested** — see [`docs/TECHNICAL-REFERENCE.md`](docs/TECHNICAL-REFERENCE.md):
+
+- The historical membership check. This is the trust list problem, and it is answered by making
+  membership a **time-bounded capability** whose issuance time is the action timestamp, with the
+  chain walked to a root at verification time. It was the least finished part of this document
+  when it was written.
+- Revocation without an operator or a global order, on objective evidence any peer can check.
+- The separation of `historically_valid` from `currently_trusted`.
+- Key rotation, as a two-step handoff and acceptance. **Implemented but not exercised end to end.**
+
+**Still open:**
+
+- **Assertion vocabularies.** Must be built with airworthiness practitioners, not desk research.
+  The current list is illustrative and is the largest single piece of domain work outstanding.
+- **The bootstrap.** Root authorities are configured per deployment rather than compiled in, which
+  makes the choice visible and changeable. It does not answer whose keys belong there.
+- **Anchoring to a qualified trust service.** §5 specifies it; nothing implements it yet, and
+  whether the resulting record is admissible is a legal question that blocks reliance.
+- **Long-lived records.** Aircraft parts fly for decades. Key material outlives every design here,
+  and rotation only partially addresses it.

@@ -1,7 +1,11 @@
 # Profile: aviation parts — back-to-birth documentation
 
-**Status: sketch.** Structurally the stronger opening, but far less researched than the bunker
-profile. Evidence in `../research/05-aviation-comparator.md`.
+**Status: this is the profile being built.** The domain was chosen on 1 September 2026; the
+reasoning is in [`../docs/RESEARCH-ARCHIVE.md`](../docs/RESEARCH-ARCHIVE.md).
+
+⚠️ **This profile is still thinner than the marine one it beat.** It was chosen on structural
+grounds — a verified-open gap with no owner — not on depth of evidence. The assertion vocabulary
+in particular is illustrative and must be built with airworthiness practitioners.
 
 ## Why this one is structurally better
 
