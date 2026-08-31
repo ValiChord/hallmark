@@ -34,6 +34,10 @@ use hdi::prelude::*;
 use validate::{validate_create, validate_link};
 
 #[hdk_entry_types]
+// `Attestation` is much larger than the other variants, but boxing it would
+// change the entry's serialized shape and therefore its hash. The wire format
+// is the contract here, so the size difference is deliberate.
+#[allow(clippy::large_enum_variant)]
 #[unit_enum(UnitEntryTypes)]
 pub enum EntryTypes {
     Attestation(Attestation),

@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: zomes build to wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust with the wasm target
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup target add wasm32-unknown-unknown
+          rustup component add clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: demo/zomes
+
+      # The two required flags live in demo/zomes/.cargo/config.toml, so they
+      # apply automatically here. See demo/zomes/BUILD.md for why they exist.
+      - name: cargo check
+        working-directory: demo/zomes
+        run: cargo check --workspace --all-targets
+
+      - name: clippy
+        working-directory: demo/zomes
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: build wasm
+        working-directory: demo/zomes
+        run: cargo build --release --target wasm32-unknown-unknown
+
+      - name: the artefacts exist
+        working-directory: demo/zomes
+        run: |
+          ls -la target/wasm32-unknown-unknown/release/*.wasm
+          test -f target/wasm32-unknown-unknown/release/aviation_attestation_integrity.wasm
+          test -f target/wasm32-unknown-unknown/release/aviation_attestation_coordinator.wasm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zome-wasm
+          path: demo/zomes/target/wasm32-unknown-unknown/release/*.wasm
+          if-no-files-found: error
+
+  web:
+    name: demo typecheck, lint and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: demo/package-lock.json
+
+      - name: install
+        working-directory: demo
+        run: npm ci
+
+      - name: typecheck
+        working-directory: demo
+        run: npm run typecheck
+
+      - name: lint
+        working-directory: demo
+        run: npm run lint
+
+      - name: tests
+        working-directory: demo
+        run: npm test
+
+  conductor:
+    name: end-to-end in a real conductor
+    runs-on: ubuntu-latest
+    needs: [rust]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: zome-wasm
+          path: demo/zomes/target/wasm32-unknown-unknown/release
+
+      - name: Fetch holochain 0.7.0 binaries
+        run: |
+          mkdir -p "$HOME/hc-bin"
+          cd "$HOME/hc-bin"
+          base=https://github.com/holochain/holochain/releases/download/holochain-0.7.0
+          curl -fsSL -o hc "$base/hc-x86_64-unknown-linux-gnu"
+          curl -fsSL -o holochain "$base/holochain-x86_64-unknown-linux-gnu"
+          chmod +x hc holochain
+          ./hc --version
+          ./holochain --version
+          echo "$HOME/hc-bin" >> "$GITHUB_PATH"
+
+      - name: Pack the DNA and hApp
+        working-directory: demo/zomes
+        run: |
+          hc dna pack .
+          hc app pack .
+
+      - name: Install the Holochain client
+        working-directory: demo
+        run: npm install --no-save @holochain/client@^0.21.0
+
+      - name: Start a sandbox conductor
+        working-directory: demo/zomes
+        run: |
+          echo "ci-passphrase" | hc sandbox --piped -f 9000 create --in-process-lair
+          echo "ci-passphrase" | hc sandbox --piped -f 9000 run > conductor.log 2>&1 &
+          for i in $(seq 1 60); do
+            grep -q "Conductor launched" conductor.log && break
+            sleep 2
+          done
+          grep -q "Conductor launched" conductor.log || { echo "conductor did not start"; cat conductor.log; exit 1; }
+
+      - name: Smoke test
+        working-directory: demo
+        run: node zomes/tests/conductor-smoke.mjs
+
+      - name: Conductor log on failure
+        if: failure()
+        working-directory: demo/zomes
+        run: tail -100 conductor.log || true

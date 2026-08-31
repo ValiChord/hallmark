@@ -12,7 +12,7 @@
  *   node tests/conductor-smoke.mjs
  */
 import { AdminWebsocket, AppWebsocket, encodeHashToBase64 } from "@holochain/client";
-import { readFileSync } from "node:fs";
+
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -233,15 +233,18 @@ async function main() {
 
   const attHash = attestation.signed_action?.hashed?.hash ?? attestation;
 
+  // Serde renders unit enum variants as plain strings and data-carrying ones as
+  // single-key objects. Normalise so the report reads the same either way.
+  const variant = (v) => (typeof v === "string" ? v : Object.keys(v ?? {})[0] ?? String(v));
+
+  const describe = (r) =>
+    `        membership=${variant(r.membership)} revocation=${variant(r.revocation)} ` +
+    `historically_valid=${r.historically_valid} currently_trusted=${r.currently_trusted}`;
+
   // 4. A third party verifies it without contacting either signer.
   try {
     const report = await callRoot("verify_attestation", attHash);
-    const membershipState = Object.keys(report.membership ?? {})[0] ?? report.membership;
-    const revocationState = Object.keys(report.revocation ?? {})[0] ?? report.revocation;
-    log(
-      `        membership=${membershipState} revocation=${revocationState} ` +
-        `historically_valid=${report.historically_valid} currently_trusted=${report.currently_trusted}`,
-    );
+    log(describe(report));
     if (report.historically_valid && report.currently_trusted) {
       ok("a third party verified the attestation");
     } else {
@@ -249,6 +252,82 @@ async function main() {
     }
   } catch (e) {
     fail("verify_attestation", e);
+    return;
+  }
+
+  // 5. The same station signs a CONTRADICTORY attestation: same part and serial,
+  //    same assertion id, opposite value, and neither supersedes the other.
+  let conflict;
+  try {
+    conflict = await callMro("create_attestation", {
+      raf_version: "0.1",
+      subject: {
+        part_type: "Engine",
+        part_number: "CFM56-7B27",
+        serial_number: "577737",
+        description: "CFM56-7B27 turbofan, stage 1 fan disk",
+      },
+      binding: {
+        binds_field: "serial_and_part",
+        document_type: "EasaForm1",
+        document_id: "AFX-2026-0142-B",
+        document_digest: "sha256:99f1e2d3c4b5a60718293a4b",
+        predecessor_document_hash: null,
+      },
+      scope: {
+        observed: [{ assertion_id: "INSPECTED", value: { Bool: false } }],
+        not_observed: [],
+      },
+      evidence: [
+        { evidence_type: "shop_traveler", digest: "sha256:ffeeddccbbaa00998877665544", locator: null },
+      ],
+      attester: {
+        agent_pubkey: mroKey,
+        role: "Mro",
+        organisation: "AeroFix MRO Ltd",
+        organisation_id: "UK.145.01234",
+      },
+      membership_proof_hash: membershipHash,
+      anchor: null,
+    });
+    ok("station signed a contradictory second attestation");
+  } catch (e) {
+    fail("create_attestation (conflict)", e);
+    return;
+  }
+  const conflictHash = conflict.signed_action?.hashed?.hash ?? conflict;
+
+  // 6. Revocation on objective, evidence-backed grounds. Note the evidence is
+  //    two records any peer can fetch and check for themselves.
+  try {
+    await callRoot("revoke_membership", {
+      membership_hash: membershipHash,
+      grounds: { ConflictingAssertions: { assertion_id: "INSPECTED" } },
+      evidence_hashes: [attHash, conflictHash],
+      notes: "INSPECTED asserted both true and false for the same part",
+    });
+    ok("membership revoked on conflicting-assertion evidence");
+  } catch (e) {
+    fail("revoke_membership", e);
+    return;
+  }
+
+  // 7. THE POINT. The first attestation was valid when it was signed and stays
+  //    valid historically; it is only current trust that the revocation removes.
+  try {
+    const after = await callRoot("verify_attestation", attHash);
+    log(describe(after));
+    const rev = variant(after.revocation);
+    if (after.historically_valid && !after.currently_trusted && rev === "RevokedAfterAssertion") {
+      ok("after revocation: still historically valid, no longer currently trusted");
+    } else {
+      fail(
+        `expected historically_valid=true, currently_trusted=false, revocation=RevokedAfterAssertion; ` +
+          `got ${after.historically_valid}/${after.currently_trusted}/${rev}`,
+      );
+    }
+  } catch (e) {
+    fail("verify_attestation after revocation", e);
   }
 
   log("\nDone.\n");
