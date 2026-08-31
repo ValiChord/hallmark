@@ -1,230 +1,365 @@
 # Release Attestation Format — draft v0.1
 
-**Status: draft, but no longer speculative.** Most of this is implemented and tested — see §8 for
-what is built and what is not, and `docs/TECHNICAL-REFERENCE.md` for how. The document is kept
-implementation-independent on purpose: it is the thing an outside party would build against.
+A format for saying **who was entitled to sign a release certificate, and exactly what they
+claimed**, in a way a stranger can check years later without contacting anyone.
+
+**Status: draft, but not speculative.** Most of this is implemented and passes an end-to-end test
+against a real Holochain conductor. §13 says precisely what is built and what is not. This document
+stays implementation-independent on purpose — it is what an outside party would build against, and
+the reference implementation is one way to satisfy it, not the definition of it.
 
 Terms: **MUST**, **SHOULD**, **MAY** as in RFC 2119.
 
 ---
 
-## 1. What an attestation is
+## 1. What this is, and what it is not
 
-An **attestation** is a signed statement by one party that, at a stated time, a stated **binding**
-held between a physical artefact and a document, within an explicitly stated **scope**.
+ATA Spec 2000 Chapter 16 already defines the electronic release certificate. It defines the data,
+the signature, and the chain: each certificate references the previous one for that part and
+carries it forward with its signature intact.
 
-It is deliberately *not* a claim that the artefact is good, compliant, or fit for purpose. Those
-claims belong to the certificate itself. This format carries the thing that is currently missing:
-the checkable link, and the honest limits of what the signer actually observed.
+It also states that it does not cover the internal processes companies use **to authorise the
+users or signers of that data**. That exclusion is reasonable for exchange between two trading
+partners who already know each other. It fails for a stranger checking a chain twenty years later,
+across companies that may no longer exist.
 
-### 1.1 The five parts
+**This format specifies the excluded layer, and nothing else.**
+
+- It **MUST NOT** replace or restate Chapter 16. A release certificate remains the authoritative
+  document.
+- An attestation is a **statement about** a release certificate: who signed, under what
+  accreditation, what they observed, and what they did not.
+- Where Chapter 16 already carries a field, an attestation **SHOULD** reference it rather than
+  duplicate it.
+
+---
+
+## 2. What an attestation is
+
+A signed statement by one party that, at a stated time, a stated **binding** held between a
+physical part and a document, within an explicitly stated **scope**.
+
+It is deliberately not a claim that the part is airworthy. That claim belongs to the certificate.
+This format carries the thing that is currently missing: the checkable link, the entitlement behind
+it, and the honest limits of what the signer observed.
 
 | Part | Purpose |
 |---|---|
-| **Subject** | The physical artefact — a fuel parcel, a retained sample, a part |
-| **Binding** | The identifier tying artefact to document — seal number, serial number |
+| **Subject** | The physical part — type, part number, serial number |
+| **Binding** | What ties part to document — serial number, document id, digest, predecessor |
 | **Scope** | What the attester asserts, and explicitly what they do not |
-| **Evidence** | Digests of and pointers to the documents, never the documents themselves |
-| **Anchor** | What gives the record time and legal weight |
+| **Attester** | Who signed, in what role, under which accreditation |
+| **Evidence** | Digests of and pointers to supporting records, never the records themselves |
+| **Anchor** | Optional qualified timestamp, for legal weight |
 
 ---
 
-## 2. Scope is the load-bearing field
+## 3. Scope is the load-bearing field
 
-Most of the failures this format targets are not lies. They are **assertions made wider than what
-the signer actually observed.**
+Most failures this format targets are not lies, and not forgeries. They are **assertions made
+wider than what the signer actually observed**.
 
-The governing case: an officer *"inadvertently certified"* that samples were drawn continuous-drip
-when they were not. Real person, real signature, wrong assertion. No signature check catches this,
-and no cryptography ever will.
+The governing case comes from the adjacent marine domain, and it generalises: an officer
+"inadvertently certified" that samples were drawn continuous-drip when they were not. Real person,
+real signature, wrong assertion. No signature check catches that, and no cryptography ever will.
 
-What a format *can* do is make the assertion **narrow, explicit and machine-comparable**, so that a
+What a format *can* do is make the assertion **narrow, explicit, and machine-comparable**, so a
 later dispute is about a stated fact rather than about what a signature was taken to mean.
 
-Therefore:
-
 - An attestation **MUST** enumerate what was observed, as discrete assertions.
-- An attestation **MUST** be able to record `not_observed` for anything within the document's normal
-  scope that the signer did not personally witness.
-- A verifier **MUST NOT** infer any assertion that is not explicitly present. Absence is never
-  assent.
+- An attestation **MUST** be able to record `not_observed` for anything within the document's
+  normal scope that the signer did not personally witness.
+- A verifier **MUST NOT** infer any assertion that is not explicitly present. **Absence is never
+  assent.**
+- A verifier **MUST** distinguish *"this assertion was not made"* from *"this assertion was made
+  and is false"*. Conflating them is how omission failures get laundered into apparent compliance.
 - Profiles **MUST** define their assertion vocabulary as a closed list. Free text is not an
-  assertion.
+  assertion. Both `observed` and `not_observed` ids **MUST** be drawn from it.
 
-This one rule is the difference between a useful record and a signed rubber stamp.
+This single rule is the difference between a useful record and a signed rubber stamp.
 
 ---
 
-## 3. Structure
+## 4. Structure
 
 ```json
 {
-  "raf": "0.1",
+  "raf_version": "0.1",
   "subject": {
-    "type": "marine.fuel.sample",
-    "identifiers": { "seal_number": "SG-4471902", "imo": "9376681" }
+    "part_type": "Engine",
+    "part_number": "CFM56-7B27",
+    "serial_number": "577737",
+    "description": "CFM56-7B27 turbofan, stage 1 fan disk"
   },
   "binding": {
-    "binds": "seal_number",
-    "to_document": { "type": "bdn", "id": "BDN-2026-08-27-1142", "digest": "sha256:..." }
+    "binds_field": "serial_and_part",
+    "document_type": "EasaForm1",
+    "document_id": "AFX-2026-0142",
+    "document_digest": "sha256:0d5f3c2b9a71e4d8c6b2f014",
+    "predecessor_document_hash": null
   },
   "scope": {
-    "observed": [
-      { "assertion": "sample.drawn_at_manifold", "value": true },
-      { "assertion": "sample.method_continuous_drip", "value": true },
-      { "assertion": "seal.applied_in_presence", "value": true }
-    ],
-    "not_observed": [ "sample.stowage_after_handover" ]
+    "observed": [{ "assertion_id": "INSPECTED", "value": { "Bool": true } }],
+    "not_observed": ["OVERHAULED", "MODIFIED"]
   },
   "evidence": [
-    { "type": "lab_certificate", "digest": "sha256:...", "locator": "opaque-or-absent" }
+    { "evidence_type": "shop_traveler", "digest": "sha256:a1b2c3d4e5f60718293a4b5c" }
   ],
-  "attester": { "id": "did-or-key-identifier", "role": "vessel.chief_engineer" },
-  "time": { "asserted_at": "2026-08-27T03:14:00Z" },
-  "anchor": { "qualified_timestamp": "rfc3161:..." },
-  "signature": "..."
+  "attester": {
+    "agent_pubkey": "…",
+    "role": "Mro",
+    "organisation": "AeroFix MRO Ltd",
+    "organisation_id": "UK.145.01234"
+  },
+  "membership_proof_hash": "…",
+  "anchor": null
 }
 ```
 
-### 3.1 Encoding
+`document_type` **MUST** be one of the forms Chapter 16 carries: FAA Form 8130-3, EASA Form 1,
+CASA Form 1, TCCA Form One, Certificate of Conformance, or Transfer Document.
+
+**There is no `issued_at` field.** Time **MUST** come from the signed record's own timestamp. A
+self-asserted time field is backdatable, and an earlier draft of this design was exploitable
+exactly there.
+
+`predecessor_document_hash` is how the Chapter 16 chain is expressed. Where present, the
+predecessor **MUST** concern the same part and **MUST** be strictly earlier.
+
+### 4.1 Encoding
 
 The wire format **MUST NOT** be W3C Verifiable Credentials. The EU wallet's recognised formats are
-**IETF SD-JWT VC** and **ISO/IEC 18013-5 mdoc**; the W3C data model "remains on the roadmap".
+IETF SD-JWT VC and ISO/IEC 18013-5 mdoc; the W3C data model "remains on the roadmap".
 
-**SD-JWT VC is the working choice**, because selective disclosure is genuinely needed here — a
-verifier often has standing to see the binding held without seeing commercial terms.
+**SD-JWT VC is the working choice**, because selective disclosure is genuinely needed: a verifier
+often has standing to see that a binding held without seeing commercial terms.
 
 The JSON above is illustrative structure, not the wire encoding.
 
-### 3.2 Evidence stays where it is
+### 4.2 Evidence stays where it is
 
 An attestation carries **digests and types**, not documents. Locators are optional and **MAY** be
 absent or opaque.
 
-This is not a privacy flourish. It is what lets the record be checked years later by someone who was
+This is not a privacy flourish. It is what lets a record be checked years later by someone who was
 never party to the transaction, without anyone having to run a document store forever.
 
 ---
 
-## 4. Value at N=2
+## 5. Value at N=2
 
-The design **MUST** be tested against a pair with no third party present. A bunker supplier and a
-vessel, alone, at 3am, with no registry reachable.
+The design **MUST** be testable against a pair with no third party present: a repair station and
+an airline, alone, with no registry reachable.
 
-**What two parties get with nobody else involved:**
+What two parties get with nobody else involved:
 
 1. Both hold the same signed statement of what was observed, with a scope neither can later widen.
-2. The binding is recorded at the moment the seal is applied, not reconstructed from memory weeks
-   later when a claim is filed.
-3. Either can hand it to a stranger — a surveyor, a club, a court — who can check it without
+2. The binding is recorded when the work is released, not reconstructed months later when a claim
+   is filed.
+3. Either can hand it to a stranger — an auditor, a regulator, a court — who can check it without
    contacting either of them.
 
 If a proposed feature does not survive this test, it does not go in v1.
 
-### 4.1 Counterparty acknowledgement
+### 5.1 Counter-attestation
 
-An attestation **MAY** carry a counter-attestation from the other party, over the same binding and
-scope.
+An attestation **MAY** carry a counter-attestation from the receiving party, over the same binding
+and scope.
 
-Agreement and disagreement are both useful, and **a recorded disagreement at the time of delivery is
-worth more than a resolved one**. Profiles with claim time bars should note that an early recorded
-dispute starts the evidential clock.
+Agreement and disagreement are both useful, and **a disagreement recorded at handover is worth more
+than one resolved later**.
 
-A counter-attestation **MUST NOT** be required for the original to verify. Requiring both parties
-online simultaneously breaks the N=2 case in exactly the conditions the format exists for.
+A counter-attestation **MUST NOT** be required for the original to verify — requiring both parties
+present breaks the N=2 case in exactly the conditions this format exists for — and **MUST NOT**
+alter the original's trust status. It is evidence for a reader to weigh, not a verdict.
 
 ---
 
-## 5. Anchoring: correctness and legal weight are separate
+## 6. Membership is a time-bounded capability
+
+This is the layer Chapter 16 excludes, and the reason this format exists.
+
+- An attester **MUST** reference the accreditation it relies on.
+- An accreditation **MUST** carry an expiry. There is no permanent membership.
+- The referenced accreditation **MUST** have been issued before the attestation and **MUST NOT**
+  have expired at the time of signing.
+- The attester's declared role and organisation **MUST** match the accreditation.
+
+**Why expiry is mandatory.** A validator can check, deterministically, that an accreditation was
+live when a record was signed. It cannot prove the *absence* of a later revocation without
+enumerating every record in existence. Expiry is therefore the only closed-world control available
+at signing time; everything else is a matter for the reader. See §9.
+
+### 6.1 Delegation
+
+- Root authorities are named in the scheme's configuration and **MUST** be settable per deployment,
+  not compiled into an implementation.
+- A non-root **MAY** grant accreditation only along a published matrix, and only to a bounded depth.
+- A delegated grant **MUST NOT** outlive the accreditation that authorised it.
+
+The reference deployment uses depth 2: **root → OEM → repair station**. This mirrors how aviation
+authority already delegates.
+
+**What this does not solve.** Someone must still decide whose keys are roots, and must verify
+real-world accreditation out of band. No regulator issues keys for this scheme. That is the
+bootstrap problem: it is a governance question, and configuring roots per deployment makes the
+choice visible and changeable rather than answering it.
+
+---
+
+## 7. Revocation
+
+Revocation is an accreditor withdrawing an accreditation. It is **not** a group of competitors
+agreeing to shun someone, and the distinction is legal as well as linguistic.
+
+- A revocation **MUST** be a new record. It **MUST NOT** modify or delete the accreditation.
+- Grounds **MUST** be objective, published in advance, and verifiable by anyone from the records
+  alone.
+- Grounds **MUST** be technical or procedural — *this attester issued records that contradict each
+  other* — never *this attester is commercially unsatisfactory*.
+- A revocation **MUST** carry the evidence that triggered it, checkable independently.
+- There **MUST** be no discretionary override. A human veto is an operator, and an operator is
+  someone's rival.
+- Revocation grounds **MUST** be designed so they cannot fire on legitimate behaviour. A station
+  certifying the same part again years later, or holding two authorised signers under one
+  certificate, is normal.
+
+### 7.1 Why this shape
+
+Browsers distrust non-compliant certificate authorities and it is accepted, because the grounds are
+objective, published in advance, and verifiable by anyone. That is the standard to meet.
+
+Fail it and this is **a group of competitors maintaining a shared list of parties they collectively
+refuse to deal with** — a concerted refusal to deal. Routing it through a neutral third party does
+not cure that.
+
+An administrative ground, exercised by the original issuer or a root over its own grants, is
+permitted without evidence. Withdrawing your own accreditation is not collective action.
+
+---
+
+## 8. Anchoring: correctness and legal weight are separate
 
 **Peer validation gives correctness. A qualified trust service gives legal weight.** These are
-different jobs and must not be conflated.
+different jobs and **MUST NOT** be conflated.
 
-Under eIDAS 2.0 a *qualified electronic ledger* must be created and managed by one or more qualified
-trust service providers and must ensure unique sequential chronological ordering. An architecture
-with no operator and no global order **can never itself be a qualified electronic ledger.**
+Under eIDAS 2.0 a *qualified electronic ledger* must be created and managed by qualified trust
+service providers and must ensure unique sequential chronological ordering. An architecture with no
+operator and no global order can never itself be a qualified electronic ledger.
 
 That is not fatal, because the ledger does not need to be qualified. **The record it emits needs to
 be sealable by something that is.**
 
 - An attestation **SHOULD** carry a qualified timestamp over its digest.
 - The timestamp **MUST** be verifiable independently of whoever produced the attestation.
-- Absence of a qualified timestamp **MUST NOT** prevent verification of the signature and binding —
-  it changes evidential weight, not validity.
+- Absence of a qualified timestamp **MUST NOT** prevent verification of the signature, the binding
+  or the scope. It changes evidential weight, not validity.
 
-> **Open, and it blocks the build:** whether peer validation plus a qualified timestamp yields
-> admissible evidence in the relevant forum. Get a lawyer's answer before writing code. If it does
-> not, the approach needs rethinking.
-
----
-
-## 6. Membership and ejection
-
-The joining rule is where the trust list problem is actually answered, and where this becomes a
-cartel if done badly.
-
-### 6.1 Requirements
-
-- Membership rules **MUST** be expressed as code that any participant can run and any stranger can
-  audit.
-- Grounds for ejection **MUST** be objective, published in advance, and verifiable by anyone from the
-  record alone.
-- Grounds **MUST** be technical or procedural — *this attester issued attestations whose bindings
-  contradict each other*, never *this attester is commercially unsatisfactory*.
-- An ejection **MUST** be accompanied by the evidence that triggered it, checkable independently.
-- There **MUST** be no discretionary override. A human veto is an operator, and an operator is
-  someone's rival.
-
-### 6.2 Why this shape
-
-Browsers do distrust and effectively kill non-compliant certificate authorities, and it is accepted,
-because the grounds are objective, published in advance and verifiable by anyone. That is the
-standard to meet.
-
-**Fail it and this is a group of competitors maintaining a shared list of parties they collectively
-refuse to trade with** — a concerted refusal to deal. Routing it through a neutral third party does
-not cure that.
+> **Open, and it blocks reliance rather than building:** whether peer validation plus a qualified
+> timestamp yields admissible evidence in the relevant forum. This needs a lawyer's answer.
 
 ---
 
-## 7. Verification
+## 9. Validation and verification are different jobs
 
-A verifier, with no relationship to any party and no network access beyond the record:
+An implementation **MUST** separate them.
+
+| | **Validation** | **Verification** |
+|---|---|---|
+| When | Once, when the record is published | Every time a party reads it |
+| Determinism | **Required.** Every checker must reach the same verdict | Not required |
+| May enumerate? | **No.** Dependencies by explicit reference only | Yes |
+| Answers | Is this record well-formed and was the signer entitled? | Should I rely on this now? |
+
+**Revocation MUST be a verification-time judgement.** Validation happens once; a revocation
+recorded later cannot retroactively unmake it, and proving the absence of a revocation would
+require a record that exists both before and after the attestation it covers. Reaching for a
+"certificate of non-revocation" reintroduces the notary this format exists to avoid.
+
+A consequence, and it is not a defect: **a record can be validly published and later turn out to be
+untrustworthy.** Trust is applied by the reader.
+
+---
+
+## 10. Verification
+
+A verifier with no relationship to any party **MUST** be able to:
 
 1. Check the signature over the attestation.
 2. Check the binding identifier is well-formed under the profile.
-3. Check the document digest matches, **if** the document is presented.
-4. Check the attester's membership at `asserted_at` — not at verification time. *Membership is
-   historical; this is the hard part and §6 is not finished.*
+3. Check the document digest, if the document is presented.
+4. Check the attester's accreditation **at the time of signing**, walking the delegation chain to a
+   root, with cycle detection.
 5. Check the qualified timestamp, if present.
 6. Report scope **as stated**, never widened.
+7. Report any revocation of the accreditation, or of anything above it in the chain.
 
-A verifier **MUST** distinguish *"this assertion was not made"* from *"this assertion was made and is
-false"*. Conflating them is how omission failures get laundered into apparent compliance.
+### 10.1 The two answers
+
+A verifier **MUST** report these separately:
+
+| | Meaning |
+|---|---|
+| `historically_valid` | Was this a real, properly authorised record when it was signed? |
+| `currently_trusted` | Should a reader rely on it now? |
+
+A revocation dated **after** the attestation leaves `historically_valid` true and sets
+`currently_trusted` false. A release certificate written while a station was accredited remains a
+real document; a later revocation taints *new* reliance, not the history.
+
+Collapsing these into one boolean is a specification error. It is the single most important thing
+this format gets right, and two earlier drafts got it wrong.
 
 ---
 
-## 8. Status of each part
+## 11. Profiles
 
-Listed so nobody mistakes a gap for a decision, or a decision for a gap.
+The core above is domain-neutral. A **profile** binds it to a document type and a working practice
+by specifying: the binding field, the closed assertion vocabulary, the accreditation types and the
+delegation matrix.
 
-**Implemented and tested** — see [`docs/TECHNICAL-REFERENCE.md`](docs/TECHNICAL-REFERENCE.md):
+- `profiles/aviation-back-to-birth.md` — the profile being built.
+- `profiles/bunker-sample-seal.md` — a second profile, not being built, retained because it
+  demonstrates the core generalises.
 
-- The historical membership check. This is the trust list problem, and it is answered by making
-  membership a **time-bounded capability** whose issuance time is the action timestamp, with the
-  chain walked to a root at verification time. It was the least finished part of this document
-  when it was written.
-- Revocation without an operator or a global order, on objective evidence any peer can check.
-- The separation of `historically_valid` from `currently_trusted`.
-- Key rotation, as a two-step handoff and acceptance. **Implemented but not exercised end to end.**
+A profile **MUST NOT** widen the core rules. It may only constrain them further.
 
-**Still open:**
+---
 
-- **Assertion vocabularies.** Must be built with airworthiness practitioners, not desk research.
-  The current list is illustrative and is the largest single piece of domain work outstanding.
-- **The bootstrap.** Root authorities are configured per deployment rather than compiled in, which
-  makes the choice visible and changeable. It does not answer whose keys belong there.
-- **Anchoring to a qualified trust service.** §5 specifies it; nothing implements it yet, and
-  whether the resulting record is admissible is a legal question that blocks reliance.
-- **Long-lived records.** Aircraft parts fly for decades. Key material outlives every design here,
-  and rotation only partially addresses it.
+## 12. What this format cannot do
+
+Stated here so it is not discovered later by a sceptic.
+
+- **It cannot make a claim true.** A real person can sign a real record with a real key and still
+  be wrong. Records are not inspections.
+- **It cannot reconstruct history.** It helps parts entering service from now on. Historical
+  paperwork gaps stay gaps.
+- **It cannot make revocation instant.** Propagation is eventual; a reader who has not yet seen a
+  revocation will report a clean result.
+- **It cannot decide who the root authorities are.**
+
+---
+
+## 13. Status of each part
+
+**Implemented and tested end to end** — see `docs/TECHNICAL-REFERENCE.md`:
+
+§2 attestation structure · §3 scope, including `not_observed` vocabulary checks · §5 N=2 and
+counter-attestation · §6 membership as a time-bounded capability, with delegation, depth limits and
+expiry inheritance · §7 revocation on objective evidence · §9 the validation/verification split ·
+§10 verification including the two answers.
+
+**Implemented, not exercised end to end:** key rotation, as a two-step handoff and acceptance.
+
+**Specified, not implemented:**
+
+- **§8 anchoring.** Nothing yet emits or checks a qualified timestamp.
+- **§4.1 SD-JWT VC encoding.** The reference implementation uses its platform's native encoding;
+  the SD-JWT VC representation is unwritten.
+
+**Open questions, not code:**
+
+- **The assertion vocabulary.** The current list is illustrative. It must be built with
+  airworthiness practitioners, and it is the largest piece of domain work outstanding.
+- **The bootstrap** — whose keys are roots (§6.1).
+- **Admissibility** (§8).

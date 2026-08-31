@@ -3,9 +3,16 @@
 **Status: this is the profile being built.** The domain was chosen on 1 September 2026; the
 reasoning is in [`../docs/RESEARCH-ARCHIVE.md`](../docs/RESEARCH-ARCHIVE.md).
 
-⚠️ **This profile is still thinner than the marine one it beat.** It was chosen on structural
-grounds — a verified-open gap with no owner — not on depth of evidence. The assertion vocabulary
-in particular is illustrative and must be built with airworthiness practitioners.
+**Why this domain and not marine fuel:** aviation has *stated demand*. The gap here was written
+down by the industry itself — once as an unowned recommendation, once as an explicit scope
+exclusion in the standard. Marine fuel has a gap that is arguably easier to describe, but nobody
+has asked for it to be closed, and both the register and the customer relationship are already
+held by others.
+
+⚠️ **This profile carries less domain research than the marine one**, because the marine sweeps ran
+first and deeper. That is a fact about how the research was done, not a mark against the domain.
+The assertion vocabulary in particular is illustrative and must be built with airworthiness
+practitioners — it is the largest piece of domain work outstanding.
 
 ## Why this one is structurally better
 

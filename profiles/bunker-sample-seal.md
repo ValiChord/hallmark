@@ -2,10 +2,19 @@
 
 **Status: NOT being built.** Kept as a record and as a second profile the format should still fit.
 
-Aviation was chosen on 1 September 2026. This domain lost on occupancy — a port authority holds
-the register and the incumbent testing lab holds the customer — not on the quality of the gap,
-which remains the most precisely documented one found anywhere in the research. If aviation
-stalls, start here. Evidence in [`../docs/RESEARCH-ARCHIVE.md`](../docs/RESEARCH-ARCHIVE.md).
+Aviation was chosen on 1 September 2026. This domain lost on two counts:
+
+1. **Nobody is asking.** The seal-number gap below is precisely describable, but it was identified
+   by reading dispute guidance — not requested by anyone in the industry. Aviation's equivalent is
+   a published, unowned recommendation from the buyers themselves, plus an explicit scope exclusion
+   in the standard. **A gap being well documented is an artefact of research effort. A gap being
+   asked about is demand.** Those are not the same thing, and this file previously conflated them.
+2. **It is occupied at both ends.** A port authority holds the register and the incumbent testing
+   lab holds the customer — and absorbed the last company that tried this.
+
+Kept because it demonstrates that the core format generalises beyond aviation, and because the
+evidence chain below is genuinely well understood. Evidence in
+[`../docs/RESEARCH-ARCHIVE.md`](../docs/RESEARCH-ARCHIVE.md).
 
 ## The gap, exactly
 
