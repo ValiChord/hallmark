@@ -43,3 +43,15 @@ No Holochain conductor is required — the browser simulation runs everything lo
 - “npm is not recognized” → Node.js is not installed or not on your PATH. Re-install from nodejs.org and open a *new* terminal.
 - Port already in use → close other apps using port 8080, or stop a previous demo that is still running.
 - Blank page → wait a few seconds for the first build; check the terminal for red error messages.
+
+## A note on the test scripts
+
+`npm test` runs the tests that belong to this project: the RAF engine, its conformance
+check against the Holochain zome, and the app-data and gate-identity units.
+
+`npm run test:platform` runs the tests under `scripts/`, which came with the Grok
+workspace template. They test that platform's own behaviour — share-card metadata, the
+PWA manifest, `SKILL.md` documentation — and read template files under `.grok/` that do
+not exist outside it, so several of them fail here regardless of anything in this repo.
+They are kept because `vite.config.ts` still uses the plugins they cover, but they are
+not run in CI: this repository should not gate on someone else's harness.
