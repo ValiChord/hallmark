@@ -194,11 +194,20 @@ figures that turned out to be dead, and the arguments that did not survive verif
 
 ## Status
 
-**Pre-decision.** The format is a draft and the beachhead is not chosen. The evidence currently
-tilts toward aviation, because its opening is verified open while marine fuel is occupied at two
-levels — the port authority holds the register and the incumbent testing lab holds the customer.
-Marine fuel retains the sharper documented gap and a real forcing function in its claim time bars
-(14 days quantity, 30 days quality).
+**A working demonstration; an undecided project.** The format is a draft and the beachhead is
+not chosen. The evidence tilts toward aviation, because its opening is verified open while
+marine fuel is occupied at two levels — the port authority holds the register and the incumbent
+testing lab holds the customer. Marine fuel retains the sharper documented gap and a real
+forcing function in its claim time bars (14 days quantity, 30 days quality).
+
+### What exists and is checked
+
+- A browser demo anyone can run in two commands.
+- A Holochain zome that compiles, packs, installs into a conductor, and passes an end-to-end
+  test: accreditation, refusal of a non-root, attestation, third-party verification, and
+  revocation that withdraws current trust while preserving historical validity.
+- A conformance test holding the TypeScript engine and the Rust zome to the same verdicts.
+- CI running all of it, including the conductor test against real holochain binaries.
 
 ### Open decisions
 
@@ -207,8 +216,13 @@ Marine fuel retains the sharper documented gap and a real forcing function in it
 - **The licence.** ALL RIGHTS RESERVED
 - **The legal form.** Foundation or co-operative, before it matters. You cannot be both a participant
   and the registrar.
+- **Who holds root keys.** The zome proves the trust anchor can be set per deployment rather than
+  compiled in. It cannot tell you whose keys belong there. That is the bootstrap problem, and it
+  is a governance question.
 
-### Before writing any code
+### What still decides whether any of this matters
+
+Code was never the hard part, and having some does not change these.
 
 1. Get the coalition's September 2025 progress report and check whether #9 has an owner.
 2. Get a lawyer's view on the anchoring pattern — peer-validated record plus qualified timestamp. If
@@ -216,5 +230,6 @@ Marine fuel retains the sharper documented gap and a real forcing function in it
 3. Find the two parties. One repair shop and one buyer, or one bunker supplier and one owner. **If
    you cannot name them, the N=2 test has already failed.**
 
-If the effort on this project is 80% engineering, it matches the profile of every corpse in
-`research/`.
+The demonstration exists so those conversations have something to point at. It is not a substitute
+for having them. If the effort on this project is 80% engineering, it matches the profile of every
+corpse in `research/`.
