@@ -65,7 +65,7 @@ hc sandbox --piped -H /path/to/holochain -f 9000 run
 ## Smoke test
 
 ```bash
-npm install --no-save @holochain/client   # from demo/
+npm install --no-save @holochain/client   # from demo/ — not a project dependency
 node zomes/tests/conductor-smoke.mjs
 ```
 
@@ -82,9 +82,14 @@ Expected output:
   PASS  signing credentials authorized for repair station
   PASS  root issued a membership proof to the repair station
   PASS  non-root membership issuance rejected
+  PASS  non-root membership issuance rejected
   PASS  repair station signed an attestation
         membership=Active revocation=Clean historically_valid=true currently_trusted=true
   PASS  a third party verified the attestation
+  PASS  station signed a contradictory second attestation
+  PASS  membership revoked on conflicting-assertion evidence
+        membership=Active revocation=RevokedAfterAssertion historically_valid=true currently_trusted=false
+  PASS  after revocation: still historically valid, no longer currently trusted
 ```
 
 ### What that actually proves
@@ -98,15 +103,23 @@ Expected output:
   call is rejected**.
 - An accredited agent's attestation verifies for a third party who was not present when it was
   signed, reporting `historically_valid` and `currently_trusted` separately.
+- **Revocation behaves as the argument requires.** After the station signs a contradictory
+  second attestation and its membership is revoked on evidence any peer can fetch, the first
+  attestation stays `historically_valid` and becomes `currently_trusted=false`, with
+  `revocation=RevokedAfterAssertion`. It was good when signed; only current trust is withdrawn.
+
+Both verification points are asserted by the smoke test, and the same expected verdicts are
+asserted against the TypeScript engine in `src/lib/raf/conformance.test.ts`. If either
+implementation drifts, one of the two fails.
 
 ### What it does not prove
 
 - Single conductor, two agents. Nothing here exercises gossip between separate nodes, network
   partitions, or DHT convergence.
-- No revocation path is exercised yet. The browser demo covers it; the zome test does not.
+- Key rotation and handoff are implemented in the zome but not exercised here.
 - The browser demo in `demo/` is an independent TypeScript reimplementation of the same rules.
-  The two agree on the trust model, but nothing enforces that they stay in step.
-
+  `src/lib/raf/conformance.test.ts` checks the two against each other, but only for the
+  scenarios the smoke test covers.
 ## Installing outside the smoke test
 
 `dna.yaml` ships `initial_members: []`, and `genesis_self_check` rejects an empty

@@ -116,7 +116,7 @@ jobs:
           hc dna pack .
           hc app pack .
 
-      - name: Install the Holochain client
+      - name: Install the Holochain client (not a project dependency)
         working-directory: demo
         run: npm install --no-save @holochain/client@^0.21.0
 
