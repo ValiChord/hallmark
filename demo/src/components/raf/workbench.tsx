@@ -151,28 +151,28 @@ export function Workbench() {
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[260px_minmax(0,1fr)] sm:px-6">
-        <aside className="flex flex-col gap-4">
-          <section className="rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
+        <aside className="contents lg:flex lg:flex-col lg:gap-4">
+          <section className="order-1 rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)] lg:order-none">
             <p className="mb-3 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
               Acting as
             </p>
-            <ul className="flex flex-col gap-1">
+            <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0">
               {dht.agents.map((agent) => {
                 const active = agent.pubkey === actor?.pubkey;
                 return (
-                  <li key={agent.pubkey}>
+                  <li key={agent.pubkey} className="shrink-0 lg:shrink">
                     <button
                       type="button"
                       onClick={() => setActingAs(agent.pubkey)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-[var(--motion-quick)]",
+                        "flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors duration-[var(--motion-quick)] lg:w-full lg:gap-3 lg:py-2.5",
                         active ? "bg-muted" : "hover:bg-muted/60",
                       )}
                     >
-                      <User className="size-4 text-aluminum" />
+                      <User className="size-4 shrink-0 text-aluminum" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{agent.name}</span>
-                        <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                        <span className="hidden truncate font-mono text-[11px] text-muted-foreground lg:block">
                           {agent.organisationId}
                         </span>
                       </span>
@@ -187,7 +187,7 @@ export function Workbench() {
             ) : null}
           </section>
 
-          <section className="rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
+          <section className="order-3 rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)] lg:order-none">
             <p className="mb-3 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
               Scenarios
             </p>
@@ -265,10 +265,12 @@ export function Workbench() {
             </p>
           </section>
 
-          <DnaCard state={dht} />
+          <div className="order-4 lg:order-none">
+            <DnaCard state={dht} />
+          </div>
         </aside>
 
-        <main className="min-w-0">
+        <main className="order-2 min-w-0 lg:order-none">
           {banner ? (
             <div
               className={cn(
