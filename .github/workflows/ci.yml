@@ -82,6 +82,30 @@ jobs:
         working-directory: demo
         run: npm test
 
+      # The production build, exactly as Render runs it. Without this, a build
+      # that only ever succeeded on a developer machine reaches deploy untested.
+      - name: production build (node-server preset)
+        working-directory: demo
+        env:
+          SERVER_PRESET: node-server
+          VITE_AUTH_ENABLED: "false"
+        run: |
+          npm run build
+          test -f .output/server/index.mjs
+
+      - name: the built server boots and serves
+        working-directory: demo
+        run: |
+          PORT=8099 node .output/server/index.mjs > boot.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o page.html http://127.0.0.1:8099/ && break
+            sleep 2
+          done
+          curl -sf -o page.html http://127.0.0.1:8099/ || { echo "server did not serve"; cat boot.log; exit 1; }
+          grep -q "RAF Workbench" page.html || { echo "unexpected page content"; head -c 400 page.html; exit 1; }
+          grep -qi "sign in" page.html && { echo "AUTH IS ON — visitors would hit a login wall"; exit 1; }
+          echo "served the workbench with no sign-in"
+
   conductor:
     name: end-to-end in a real conductor
     runs-on: ubuntu-latest
