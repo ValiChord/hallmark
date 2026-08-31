@@ -91,8 +91,14 @@ export function Workbench() {
   const [bannerOk, setBannerOk] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [showIntroMore, setShowIntroMore] = useState(false);
 
-  useEffect(() => setHydrated(true), []);
+  useEffect(() => {
+    setHydrated(true);
+    // Only known client-side, so it cannot be the initial state without
+    // causing a hydration mismatch.
+    setShowIntro(window.innerWidth >= 1024);
+  }, []);
 
   const actor = dht.agents.find((a) => a.pubkey === actingAs) ?? dht.agents[0];
 
@@ -171,7 +177,7 @@ export function Workbench() {
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[260px_minmax(0,1fr)] sm:px-6">
         <aside className="contents lg:flex lg:flex-col lg:gap-4">
-          <section className="order-1 rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)] lg:order-none">
+          <section className="order-1 min-w-0 rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)] lg:order-none">
             <p className="mb-3 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
               Acting as
             </p>
@@ -206,7 +212,7 @@ export function Workbench() {
             ) : null}
           </section>
 
-          <section className="order-3 rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)] lg:order-none">
+          <section className="order-3 min-w-0 rounded-xl bg-surface p-4 shadow-[0_0_0_1px_rgba(232,230,225,0.08)] lg:order-none">
             <p className="mb-3 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
               Scenarios
             </p>
@@ -284,7 +290,7 @@ export function Workbench() {
             </p>
           </section>
 
-          <div className="order-4 lg:order-none">
+          <div className="order-4 min-w-0 lg:order-none">
             <DnaCard state={dht} />
           </div>
         </aside>
@@ -299,6 +305,16 @@ export function Workbench() {
             >
               {banner}
             </div>
+          ) : null}
+
+          {!showIntro ? (
+            <button
+              type="button"
+              onClick={() => setShowIntro(true)}
+              className="mb-4 w-full rounded-lg bg-surface px-4 py-3 text-left text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(232,230,225,0.08)] hover:text-fg"
+            >
+              What am I looking at?
+            </button>
           ) : null}
 
           {showIntro ? (
@@ -326,6 +342,8 @@ export function Workbench() {
                   </span>{" "}
                   This page is that decision, made checkable.
                 </p>
+                {showIntroMore ? (
+                  <>
                 <p>
                   <span className="text-fg">Who runs it?</span> Nobody yet — and that is the honest
                   open question, not a gap in the demo. The root authorities are set when the
@@ -342,6 +360,15 @@ export function Workbench() {
                   under <span className="text-fg">Other path</span>, and it is where a chain
                   begins.
                 </p>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setShowIntroMore((v) => !v)}
+                  className="self-start text-xs text-muted-foreground underline underline-offset-4 hover:text-fg"
+                >
+                  {showIntroMore ? "Less" : "Who runs it? And why are there two forms?"}
+                </button>
                 <p className="text-fg">
                   Press <span className="font-medium">Load sample</span>, then run{" "}
                   <span className="font-medium">Inspect, then overhaul</span> — that is ordinary
