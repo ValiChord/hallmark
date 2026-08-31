@@ -19,11 +19,17 @@ export type BindsField = (typeof BINDS_FIELDS)[number];
  * it is deliberately visible here rather than buried.
  */
 export const ASSERTION_VOCABULARY = [
-  "OVERHAULED",
+  // Block 11 terms for the airworthiness-approval path, verbatim from
+  // FAA Order 8130.21J section 4-1(k). These three are real.
+  "NEW",
+  "PROTOTYPE",
+  "USED",
+  // Return-to-service terms. INSPECTED is documented (8130-3 Q&A, Q32);
+  // the rest are ordinary maintenance language, not enumerated anywhere.
   "INSPECTED",
+  "OVERHAULED",
   "MODIFIED",
   "REPAIRED",
-  "PROTOTYPE",
   "LIFE_LIMITED_SCRAP",
 ] as const;
 export type AssertionId = (typeof ASSERTION_VOCABULARY)[number];

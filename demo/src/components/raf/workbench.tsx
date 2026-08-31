@@ -10,6 +10,7 @@ import {
   ShieldOff,
   User,
 } from "lucide-react";
+import { RafFooter } from "@/components/raf/footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -144,6 +145,9 @@ export function Workbench() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/airworthiness">Other path</Link>
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/source">Zome source</Link>
             </Button>
@@ -330,6 +334,14 @@ export function Workbench() {
                   Deciding whose keys those are is a governance question and it has not been
                   answered.
                 </p>
+                <p>
+                  The same certificate has{" "}
+                  <span className="text-fg">two entirely different uses</span> — one for a part
+                  being manufactured, one for a part being maintained — governed by different rules
+                  and signed by different people. This page is the maintenance one. The other is
+                  under <span className="text-fg">Other path</span>, and it is where a chain
+                  begins.
+                </p>
                 <p className="text-fg">
                   Press <span className="font-medium">Load sample</span>, then run{" "}
                   <span className="font-medium">Inspect, then overhaul</span> — that is ordinary
@@ -393,6 +405,7 @@ export function Workbench() {
           {tab === "ledger" ? <Ledger state={dht} /> : null}
         </main>
       </div>
+      <RafFooter />
     </div>
   );
 }

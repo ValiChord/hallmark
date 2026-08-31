@@ -34,6 +34,12 @@ export const useRaf = create<RafStore>()(
       reset: () => set(withActor(emptyState())),
       seed: () => set(withActor(seedNetwork())),
     }),
-    { name: "raf-workbench-v1" },
+    {
+      // Bump this whenever DnaProperties change. The persisted state carries a
+      // snapshot of the DNA, so a stale copy rejects records the current build
+      // considers valid — adding the real Block 11 terms broke every already-open
+      // tab until this moved to v2.
+      name: "raf-workbench-v2",
+    },
   ),
 );

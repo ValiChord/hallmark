@@ -11,12 +11,17 @@ integrity:
     max_delegation_depth: 2
     # 365 days in microseconds
     max_membership_ttl_micros: 31536000000000
+    # NEW / PROTOTYPE / USED are the real Block 11 terms for the airworthiness
+    # approval path (FAA Order 8130.21J s4-1(k)). The rest are return-to-service
+    # language and remain provisional.
     assertion_vocabulary:
-      - OVERHAULED
+      - NEW
+      - PROTOTYPE
+      - USED
       - INSPECTED
+      - OVERHAULED
       - MODIFIED
       - REPAIRED
-      - PROTOTYPE
       - LIFE_LIMITED_SCRAP
   zomes:
     - name: aviation_attestation_integrity

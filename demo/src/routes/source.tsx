@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RafFooter } from "@/components/raf/footer";
 import { cn } from "@/lib/utils";
 import integrityLib from "../../zomes/crates/integrity/src/lib.rs?raw";
 import integrityTypes from "../../zomes/crates/integrity/src/types.rs?raw";
@@ -61,6 +62,7 @@ function SourcePage() {
           {file.src}
         </pre>
       </div>
+      <RafFooter />
     </div>
   );
 }

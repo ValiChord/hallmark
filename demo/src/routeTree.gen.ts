@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AirworthinessRouteImport } from './routes/airworthiness'
 import { Route as SourceRouteImport } from './routes/source'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AirworthinessRoute = AirworthinessRouteImport.update({
+  id: '/airworthiness',
+  path: '/airworthiness',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SourceRoute = SourceRouteImport.update({
@@ -25,27 +31,31 @@ const SourceRoute = SourceRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/airworthiness': typeof AirworthinessRoute
   '/source': typeof SourceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/airworthiness': typeof AirworthinessRoute
   '/source': typeof SourceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/airworthiness': typeof AirworthinessRoute
   '/source': typeof SourceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/source'
+  fullPaths: '/' | '/airworthiness' | '/source'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/source'
-  id: '__root__' | '/' | '/source'
+  to: '/' | '/airworthiness' | '/source'
+  id: '__root__' | '/' | '/airworthiness' | '/source'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AirworthinessRoute: typeof AirworthinessRoute
   SourceRoute: typeof SourceRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/airworthiness': {
+      id: '/airworthiness'
+      path: '/airworthiness'
+      fullPath: '/airworthiness'
+      preLoaderRoute: typeof AirworthinessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/source': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AirworthinessRoute: AirworthinessRoute,
   SourceRoute: SourceRoute,
 }
 export const routeTree = rootRouteImport
