@@ -3,7 +3,7 @@ import { defineConfig } from './src/main/defineConfig';
 export default defineConfig({
   appId: 'uk.valichord.hallmark',
   productName: 'Hallmark',
-  version: '0.0.1',
+  version: '0.1.0',
   macOSCodeSigning: false,
   windowsEVCodeSigning: false,
   fallbackToIndexHtml: true,

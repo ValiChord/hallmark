@@ -94,6 +94,48 @@ install one.
 5. Now compare DNA hashes. If they match, you are on one network and neither of
    you can be running different rules.
 
+### Running more than one device, including Android
+
+Two instances share a DHT only if **all four** of these match. There is no
+partial credit: any difference produces a different DNA hash, and two different
+DNA hashes are two networks that cannot see each other.
+
+| Must match | Where it is set | Notes |
+|---|---|---|
+| The happ bytes | `demo/zomes/aviation_provenance.happ` | Same wasm, same `dna.yaml` |
+| DNA properties | `network.json` | Roots **and** both vocabularies, exactly |
+| Network seed | `HALLMARK_NETWORK_SEED` in `src/main/cli.ts` | Currently `hallmark-aviation-1` |
+| Holochain version | `kangaroo.config.ts` | 0.7.0 |
+
+Two traps that come from Kangaroo's defaults and are fixed here, but which will
+catch you if you use a stock template elsewhere:
+
+- Kangaroo derives the seed from the product name and version, and at `0.0.z`
+  **every patch bump is a new network**. The version is `0.1.0` for that reason:
+  at `0.1.z` the data directory and seed are stable across patches.
+- Kangaroo appends `-dev` to the seed for unpackaged builds, so `npm run dev`
+  could not see a packaged build. Hallmark states the seed explicitly instead,
+  so a dev build and an installer are on the same network.
+
+**Android is viable, on the same Holochain version.** Use Holochain's own
+[android-service-runtime](https://github.com/holochain/android-service-runtime),
+which pins `holochain 0.7.0` on `main` and was last updated 2026-08-27. Do *not*
+use darksoil's [tauri-plugin-holochain](https://github.com/darksoil-studio/tauri-plugin-holochain)
+for this: its `main` pins `holochain_types = "0.6"` and its newest branch is
+`main-0.6.1`, so it cannot join a 0.7.0 network. Holochain versions are not
+wire-compatible across a major DHT revision.
+
+An Android build must be given the same seed and the same properties by hand —
+it has no idea what this app's product name or version is.
+
+**One caveat to verify before relying on it.** Holochain documentation describes
+mobile nodes running in a "zero-arc" configuration, meaning they do not hold a
+shard of the DHT — good for battery and app-store rules, but it means phones
+publish and read without storing. If that is accurate, a phones-only network has
+nowhere to keep records, and **at least one desktop node must stay running** for
+anything to persist. Confirm this against the runtime's own docs before a
+demonstration; it is the difference between a working demo and an empty one.
+
 ### What this does not solve
 
 Nothing here decides *whose* keys belong in `initial_members`. In the real
