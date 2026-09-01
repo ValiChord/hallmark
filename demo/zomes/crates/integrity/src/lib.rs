@@ -70,20 +70,116 @@ pub fn genesis_self_check(_data: GenesisSelfCheckData) -> ExternResult<ValidateC
     }
 }
 
+fn immutable() -> ExternResult<ValidateCallbackResult> {
+    Ok(ValidateCallbackResult::Invalid(
+        "RAF entries are immutable".into(),
+    ))
+}
+
+/// This DNA defines no private entry types and no capability tokens. A record
+/// claiming one came from a client this DNA did not write.
+fn not_in_this_dna(what: &str) -> ExternResult<ValidateCallbackResult> {
+    Ok(ValidateCallbackResult::Invalid(format!(
+        "this DNA defines no {what}"
+    )))
+}
+
+/// Holochain runs this callback once per **op**, and the same data produces
+/// several ops validated by *different* authorities. `Op::StoreEntry` reaches
+/// the entry authority as [`FlatOp::CreateEntry`]; `Op::StoreRecord` reaches the
+/// record authority as [`FlatOp::CreateRecord`]; `Op::RegisterAgentActivity`
+/// reaches the chain authority as [`FlatOp::AgentActivity`].
+///
+/// Rules written for only one of those are enforced by only that authority. So
+/// the record authority runs the *same* entry and link rules as the entry
+/// authority — anything less and a modified client can publish a record whose
+/// content no authority ever checked.
+///
+/// The match below is deliberately **exhaustive, with no `_` arm**. A catch-all
+/// here defaults to accepting whatever a future HDI adds; without one, the
+/// compiler makes the next variant a build failure and forces a decision.
 #[hdk_extern]
 pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
     match op.flattened::<EntryTypes, LinkTypes>()? {
+        // ---- entry authority -------------------------------------------------
         FlatOp::CreateEntry(OpEntry::CreateEntry { app_entry, action }) => {
             validate_create(app_entry, action)
         }
         FlatOp::CreateEntry(OpEntry::UpdateEntry { .. })
-        | FlatOp::Update(OpUpdate::Entry { .. }) => Ok(ValidateCallbackResult::Invalid(
-            "RAF entries are immutable".into(),
-        )),
-        FlatOp::Delete(_) => Ok(ValidateCallbackResult::Invalid(
-            "RAF entries are immutable".into(),
-        )),
+        | FlatOp::CreateEntry(OpEntry::UpdateAgent { .. })
+        | FlatOp::Update(OpUpdate::Entry { .. })
+        | FlatOp::Update(OpUpdate::PrivateEntry { .. })
+        | FlatOp::Update(OpUpdate::Agent { .. }) => immutable(),
+        FlatOp::CreateEntry(OpEntry::CreateCapGrant { .. })
+        | FlatOp::CreateEntry(OpEntry::CreateCapClaim { .. })
+        | FlatOp::CreateEntry(OpEntry::UpdateCapGrant { .. })
+        | FlatOp::CreateEntry(OpEntry::UpdateCapClaim { .. })
+        | FlatOp::Update(OpUpdate::CapGrant { .. })
+        | FlatOp::Update(OpUpdate::CapClaim { .. }) => not_in_this_dna("capability tokens"),
+        // The agent's own key entry, written at genesis by the conductor.
+        FlatOp::CreateEntry(OpEntry::CreateAgent { .. }) => Ok(ValidateCallbackResult::Valid),
+
+        FlatOp::Delete(_) => immutable(),
         FlatOp::Link(link) => validate_link(link),
-        _ => Ok(ValidateCallbackResult::Valid),
+
+        // ---- record authority: the same rules, or the record is unchecked ----
+        FlatOp::CreateRecord(OpRecord::CreateEntry { app_entry, action }) => {
+            validate_create(app_entry, action)
+        }
+        FlatOp::CreateRecord(OpRecord::CreateLink { link_type, action }) => {
+            validate_link(OpLink::CreateLink { link_type, action })
+        }
+        FlatOp::CreateRecord(OpRecord::UpdateEntry { .. })
+        | FlatOp::CreateRecord(OpRecord::UpdatePrivateEntry { .. })
+        | FlatOp::CreateRecord(OpRecord::UpdateAgent { .. })
+        | FlatOp::CreateRecord(OpRecord::DeleteEntry { .. })
+        | FlatOp::CreateRecord(OpRecord::DeleteLink { .. }) => immutable(),
+        FlatOp::CreateRecord(OpRecord::CreatePrivateEntry { .. }) => {
+            not_in_this_dna("private entry types")
+        }
+        FlatOp::CreateRecord(OpRecord::CreateCapGrant { .. })
+        | FlatOp::CreateRecord(OpRecord::CreateCapClaim { .. })
+        | FlatOp::CreateRecord(OpRecord::UpdateCapGrant { .. })
+        | FlatOp::CreateRecord(OpRecord::UpdateCapClaim { .. }) => {
+            not_in_this_dna("capability tokens")
+        }
+        // System actions the conductor writes: genesis, migration, init.
+        FlatOp::CreateRecord(OpRecord::CreateAgent { .. })
+        | FlatOp::CreateRecord(OpRecord::Dna { .. })
+        | FlatOp::CreateRecord(OpRecord::OpenChain { .. })
+        | FlatOp::CreateRecord(OpRecord::CloseChain { .. })
+        | FlatOp::CreateRecord(OpRecord::AgentValidationPkg { .. })
+        | FlatOp::CreateRecord(OpRecord::InitZomesComplete { .. }) => {
+            Ok(ValidateCallbackResult::Valid)
+        }
+
+        // ---- chain authority -------------------------------------------------
+        // Entry *content* is not available here (only the unit type), so this
+        // authority checks chain shape: the same immutability rule, and the same
+        // refusal of entry kinds this DNA never defines.
+        FlatOp::AgentActivity(OpActivity::UpdateEntry { .. })
+        | FlatOp::AgentActivity(OpActivity::UpdatePrivateEntry { .. })
+        | FlatOp::AgentActivity(OpActivity::UpdateAgent { .. })
+        | FlatOp::AgentActivity(OpActivity::DeleteEntry { .. })
+        | FlatOp::AgentActivity(OpActivity::DeleteLink { .. }) => immutable(),
+        FlatOp::AgentActivity(OpActivity::CreatePrivateEntry { .. }) => {
+            not_in_this_dna("private entry types")
+        }
+        FlatOp::AgentActivity(OpActivity::CreateCapGrant { .. })
+        | FlatOp::AgentActivity(OpActivity::CreateCapClaim { .. })
+        | FlatOp::AgentActivity(OpActivity::UpdateCapGrant { .. })
+        | FlatOp::AgentActivity(OpActivity::UpdateCapClaim { .. }) => {
+            not_in_this_dna("capability tokens")
+        }
+        FlatOp::AgentActivity(OpActivity::CreateEntry { .. })
+        | FlatOp::AgentActivity(OpActivity::CreateLink { .. })
+        | FlatOp::AgentActivity(OpActivity::CreateAgent { .. })
+        | FlatOp::AgentActivity(OpActivity::Dna { .. })
+        | FlatOp::AgentActivity(OpActivity::OpenChain { .. })
+        | FlatOp::AgentActivity(OpActivity::CloseChain { .. })
+        | FlatOp::AgentActivity(OpActivity::AgentValidationPkg { .. })
+        | FlatOp::AgentActivity(OpActivity::InitZomesComplete { .. }) => {
+            Ok(ValidateCallbackResult::Valid)
+        }
     }
 }

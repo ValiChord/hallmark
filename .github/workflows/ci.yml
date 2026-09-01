@@ -88,7 +88,6 @@ jobs:
         working-directory: demo
         env:
           SERVER_PRESET: node-server
-          VITE_AUTH_ENABLED: "false"
         run: |
           npm run build
           test -f .output/server/index.mjs
@@ -105,6 +104,33 @@ jobs:
           grep -q "RAF Workbench" page.html || { echo "unexpected page content"; head -c 400 page.html; exit 1; }
           grep -qi "sign in" page.html && { echo "AUTH IS ON — visitors would hit a login wall"; exit 1; }
           echo "served the workbench with no sign-in"
+
+      # The site shipped a third-party script for weeks without anyone noticing,
+      # because nothing looked. Now something looks, on every push.
+      - name: no third-party script, and the headers are present
+        working-directory: demo
+        run: |
+          PORT=8098 node .output/server/index.mjs > guard.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o guard.html http://127.0.0.1:8098/ && break
+            sleep 2
+          done
+          curl -sf -D guard.headers -o guard.html http://127.0.0.1:8098/ \
+            || { echo "server did not serve"; cat guard.log; exit 1; }
+
+          # Google Fonts is the one allowed external origin, and it is a
+          # stylesheet, never a script.
+          if grep -oE 'src="https?://[^"]+"' guard.html | grep -v 'fonts.gstatic.com'; then
+            echo "THIRD-PARTY SCRIPT ON THE PAGE — see the lines above"
+            exit 1
+          fi
+
+          for h in content-security-policy x-content-type-options referrer-policy \
+                   x-frame-options strict-transport-security permissions-policy; do
+            grep -qi "^$h:" guard.headers || { echo "missing header: $h"; cat guard.headers; exit 1; }
+          done
+          grep -qi "frame-ancestors 'none'" guard.headers || { echo "CSP lost frame-ancestors"; exit 1; }
+          echo "no third-party scripts; all six security headers present"
 
   conductor:
     name: end-to-end in a real conductor

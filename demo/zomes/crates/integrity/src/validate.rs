@@ -128,10 +128,22 @@ fn validate_membership(
             if issued_at > issuer.expires_at {
                 return invalid("issuer membership expired before this proof");
             }
-            let expected_depth = issuer
-                .depth
-                .checked_add(1)
-                .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("depth overflow".into())))?;
+            // Expiry inheritance (SPEC §6.1). Without this a delegated grant
+            // outlives the accreditation that authorised it, and because the
+            // chain walk deliberately does not re-check ancestor expiry at
+            // attestation time — it relies on this rule holding — an attestation
+            // signed after the issuer's approval lapsed would still verify as
+            // Active.
+            if proof.expires_at > issuer.expires_at {
+                return invalid("delegated membership may not outlive the issuer's accreditation");
+            }
+            let expected_depth = issuer.depth.checked_add(1);
+            let expected_depth = match expected_depth {
+                Some(d) => d,
+                // Invalid data, not a validator fault: an Err here leaves the op
+                // unresolved rather than rejected.
+                None => return invalid("delegation depth overflow"),
+            };
             if expected_depth > props.max_delegation_depth {
                 return invalid(format!(
                     "delegation depth {expected_depth} exceeds max {}",
