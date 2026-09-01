@@ -76,12 +76,18 @@ fn immutable() -> ExternResult<ValidateCallbackResult> {
     ))
 }
 
-/// This DNA defines no private entry types and no capability tokens. A record
-/// claiming one came from a client this DNA did not write.
-fn not_in_this_dna(what: &str) -> ExternResult<ValidateCallbackResult> {
-    Ok(ValidateCallbackResult::Invalid(format!(
-        "this DNA defines no {what}"
-    )))
+/// Capability tokens and private entries are conductor and client machinery,
+/// not app data. This DNA never asks for one — but the conductor commits a
+/// **capability grant to the agent's own chain** when a client authorises
+/// signing credentials, and every other node validates that action as part of
+/// that agent's chain. Rejecting them here marks an honest peer's whole chain
+/// invalid, which is worse than the forgery it was meant to prevent: it stops
+/// gossip dead. (Learned the hard way — CI, 1 Sep 2026.)
+///
+/// So they are permitted, and the rules that matter are the app-data ones
+/// below: entry content, link structure, and immutability.
+fn conductor_machinery() -> ExternResult<ValidateCallbackResult> {
+    Ok(ValidateCallbackResult::Valid)
 }
 
 /// Holochain runs this callback once per **op**, and the same data produces
@@ -115,7 +121,7 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
         | FlatOp::CreateEntry(OpEntry::UpdateCapGrant { .. })
         | FlatOp::CreateEntry(OpEntry::UpdateCapClaim { .. })
         | FlatOp::Update(OpUpdate::CapGrant { .. })
-        | FlatOp::Update(OpUpdate::CapClaim { .. }) => not_in_this_dna("capability tokens"),
+        | FlatOp::Update(OpUpdate::CapClaim { .. }) => conductor_machinery(),
         // The agent's own key entry, written at genesis by the conductor.
         FlatOp::CreateEntry(OpEntry::CreateAgent { .. }) => Ok(ValidateCallbackResult::Valid),
 
@@ -135,13 +141,13 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
         | FlatOp::CreateRecord(OpRecord::DeleteEntry { .. })
         | FlatOp::CreateRecord(OpRecord::DeleteLink { .. }) => immutable(),
         FlatOp::CreateRecord(OpRecord::CreatePrivateEntry { .. }) => {
-            not_in_this_dna("private entry types")
+            conductor_machinery()
         }
         FlatOp::CreateRecord(OpRecord::CreateCapGrant { .. })
         | FlatOp::CreateRecord(OpRecord::CreateCapClaim { .. })
         | FlatOp::CreateRecord(OpRecord::UpdateCapGrant { .. })
         | FlatOp::CreateRecord(OpRecord::UpdateCapClaim { .. }) => {
-            not_in_this_dna("capability tokens")
+            conductor_machinery()
         }
         // System actions the conductor writes: genesis, migration, init.
         FlatOp::CreateRecord(OpRecord::CreateAgent { .. })
@@ -163,13 +169,13 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
         | FlatOp::AgentActivity(OpActivity::DeleteEntry { .. })
         | FlatOp::AgentActivity(OpActivity::DeleteLink { .. }) => immutable(),
         FlatOp::AgentActivity(OpActivity::CreatePrivateEntry { .. }) => {
-            not_in_this_dna("private entry types")
+            conductor_machinery()
         }
         FlatOp::AgentActivity(OpActivity::CreateCapGrant { .. })
         | FlatOp::AgentActivity(OpActivity::CreateCapClaim { .. })
         | FlatOp::AgentActivity(OpActivity::UpdateCapGrant { .. })
         | FlatOp::AgentActivity(OpActivity::UpdateCapClaim { .. }) => {
-            not_in_this_dna("capability tokens")
+            conductor_machinery()
         }
         FlatOp::AgentActivity(OpActivity::CreateEntry { .. })
         | FlatOp::AgentActivity(OpActivity::CreateLink { .. })
