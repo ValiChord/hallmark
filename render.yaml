@@ -18,12 +18,11 @@ services:
       - key: SERVER_PRESET
         value: node-server
 
-      # MUST be set. `authEnabled` is `VITE_AUTH_ENABLED !== "false"`, so leaving
-      # it unset turns sign-in ON and the demo asks a visitor to authenticate
-      # before showing them anything. It is a VITE_ variable, so it is baked in
-      # at build time — setting it only at runtime would be too late.
-      - key: VITE_AUTH_ENABLED
-        value: "false"
-
+      # There is no VITE_AUTH_ENABLED any more. The auth stack it disabled was
+      # inherited scaffolding that nothing reached, and it was deleted on
+      # 2026-09-01 along with the database and the preview harness. The demo now
+      # has no sign-in to switch off. If an old Render environment still carries
+      # the variable, it is inert — but delete it, so nobody reads it as a
+      # feature that exists.
       - key: NODE_VERSION
         value: "22"
