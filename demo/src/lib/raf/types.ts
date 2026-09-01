@@ -4,36 +4,61 @@ export const BINDS_FIELDS = ["serial_number", "part_number", "serial_and_part"] 
 export type BindsField = (typeof BINDS_FIELDS)[number];
 
 /**
- * Status/work terms, the Block 11 field on FAA Form 8130-3.
+ * Which set of certification blocks a record represents.
  *
- * ⚠️ PROVISIONAL. FAA Order 8130.21J §4-1(k) defines Block 11 for the *airworthiness
- * approval* path as exactly three terms — NEW, PROTOTYPE, USED. The *return to service*
- * path this demo models is governed by AC 43-9 instead, where INSPECTED and TESTED are
- * documented (FAA 8130-3 Q&A, Q32: "the term entered in block 11 should reflect the
- * majority of the work performed").
- *
- * So this list mixes real terms from both paths with plausible ones. OVERHAULED, REPAIRED
- * and MODIFIED are ordinary maintenance language but are not enumerated in 8130.21J;
- * LIFE_LIMITED_SCRAP is ours. The real vocabulary has to be settled with airworthiness
- * practitioners against AC 43-9 — it is the largest piece of domain work outstanding, and
- * it is deliberately visible here rather than buried.
+ * FAA Form 8130-3 carries two mutually exclusive certification block sets, and
+ * the regulator treats them as different documents with different rules,
+ * different signers and different Block 11 vocabularies. Each side's guidance
+ * tells the signer to shade out the other side's blocks, and both forbid a
+ * mixture of production- and maintenance-released items on one form.
  */
-export const ASSERTION_VOCABULARY = [
-  // Block 11 terms for the airworthiness-approval path, verbatim from
-  // FAA Order 8130.21J section 4-1(k). These three are real.
-  "NEW",
-  "PROTOTYPE",
-  "USED",
-  // Return-to-service terms. INSPECTED and TESTED are documented (8130-3 Q&A,
-  // Q32); the rest are ordinary maintenance language, not enumerated anywhere.
+export const CERTIFICATION_PATHS = ["AirworthinessApproval", "ReturnToService"] as const;
+export type CertificationPath = (typeof CERTIFICATION_PATHS)[number];
+
+/**
+ * Block 11 (Status/Work) terms, **partitioned by certification path**.
+ *
+ * These are no longer provisional. Both lists are taken verbatim from the
+ * regulator, and both documents were reissued in September 2025:
+ *
+ * - Blocks 13a–13e — FAA Order 8130.21J (25 Sep 2025) ¶11.k: "Enter one of the
+ *   terms below." Closed and mandatory.
+ * - Blocks 14a–14e — AC 43-9D (22 Sep 2025) Table B-1: "The following table
+ *   describes what to enter in a specific situation… The use of upper case or
+ *   lowercase in this block does not matter." Enumerated but advisory, and the
+ *   table's note adds: "The applicable standard must be described in block 12."
+ *
+ * EASA's equivalents differ — its production list is PROTOTYPE/NEW only, and it
+ * combines "Inspected/Tested" into one term. That is why the live vocabulary is
+ * a DNA property rather than this constant: a different regulator is a different
+ * install, not a different build. These are the FAA defaults.
+ *
+ * LIFE_LIMITED_SCRAP used to be here and is gone. It is in neither regulator's
+ * list, and a release certificate is the wrong instrument: EASA AMC1 145.A.50(d)
+ * says a certificate "should not be issued for any item when it is known that
+ * the item is unserviceable".
+ */
+export const AIRWORTHINESS_VOCABULARY = ["NEW", "PROTOTYPE", "USED"] as const;
+export const RETURN_TO_SERVICE_VOCABULARY = [
+  "OVERHAULED",
+  "REPAIRED",
   "INSPECTED",
   "TESTED",
-  "OVERHAULED",
   "MODIFIED",
-  "REPAIRED",
-  "LIFE_LIMITED_SCRAP",
+] as const;
+
+/** Every term, for display only. Validation always uses one path's list. */
+export const ASSERTION_VOCABULARY = [
+  ...AIRWORTHINESS_VOCABULARY,
+  ...RETURN_TO_SERVICE_VOCABULARY,
 ] as const;
 export type AssertionId = (typeof ASSERTION_VOCABULARY)[number];
+
+export function vocabularyFor(dna: DnaProperties, path: CertificationPath): string[] {
+  return path === "AirworthinessApproval"
+    ? dna.airworthinessVocabulary
+    : dna.returnToServiceVocabulary;
+}
 
 export const PART_TYPES = [
   "Engine",
@@ -109,6 +134,9 @@ export type Subject = {
 };
 
 export type Binding = {
+  /** Which certification block set this record represents. Governs the
+   *  permitted vocabulary, who may sign, and whether a predecessor is allowed. */
+  certificationPath: CertificationPath;
   bindsField: BindsField;
   documentType: DocumentType;
   documentId: string;
@@ -222,17 +250,55 @@ export type Agent = {
 
 export type DnaProperties = {
   initialMembers: string[];
-  assertionVocabulary: string[];
+  /** Blocks 13a-13e. Closed and mandatory (8130.21J para 11.k). */
+  airworthinessVocabulary: string[];
+  /** Blocks 14a-14e. Enumerated, advisory in the source (AC 43-9D Table B-1). */
+  returnToServiceVocabulary: string[];
   maxDelegationDepth: number;
   maxMembershipTtlMs: number;
 };
 
 export const DEFAULT_DNA: DnaProperties = {
   initialMembers: [],
-  assertionVocabulary: [...ASSERTION_VOCABULARY],
+  airworthinessVocabulary: [...AIRWORTHINESS_VOCABULARY],
+  returnToServiceVocabulary: [...RETURN_TO_SERVICE_VOCABULARY],
   maxDelegationDepth: 2,
   maxMembershipTtlMs: 365 * 24 * 60 * 60 * 1000,
 };
+
+/**
+ * Which certification path an accreditation may sign.
+ *
+ * - **Blocks 13** need a production approval: FAA production approval holder
+ *   (14 CFR §21.137(o)), or EASA Part-21 production organisation (21.A.163).
+ * - **Blocks 14** need maintenance authority: AC 43-9D — "Only those persons
+ *   authorized by 14 CFR §43.7(b)-(e) may issue FAA Form 8130-3 for approval for
+ *   return to service" — or EASA Part-145 certifying staff (145.A.50).
+ *
+ * A distributor holds neither: re-issuing a form with a traceability statement
+ * (8130.21J ¶11.l(2)) is not certifying the article.
+ *
+ * The regulations partition this by construction rather than by prohibition —
+ * no sentence says "NEW is forbidden in block 14". It follows from each
+ * appendix declaring its own list exhaustive for its own purpose, each shading
+ * out the other block set, and both forbidding a mixture on one certificate.
+ */
+export function accreditationMaySign(
+  accred: AccreditationType,
+  path: CertificationPath,
+): boolean {
+  switch (accred) {
+    case "FaaPma":
+    case "EasaPart21g":
+    case "OemAuthorized":
+      return path === "AirworthinessApproval";
+    case "FaaRepairStation":
+    case "EasaPart145":
+      return path === "ReturnToService";
+    case "DistributorAccredited":
+      return false;
+  }
+}
 
 export function roleMatchesAccreditation(
   accred: AccreditationType,

@@ -78,7 +78,7 @@ All entries are immutable. Updates and deletes are rejected. Correction is a new
 ```
 raf_version            "0.1"
 subject                part_type, part_number, serial_number, description
-binding                binds_field, document_type, document_id,
+binding                certification_path, binds_field, document_type, document_id,
                        document_digest, predecessor_document_hash?
 scope                  observed: [{assertion_id, value}], not_observed: [assertion_id]
 evidence               [{evidence_type, digest, locator?}]
@@ -109,31 +109,63 @@ one. These are the fields that correspond, with their block numbers on the form.
 Approval*; blocks 14a–14e are *Approval for Return to Service*. The maintenance case this project
 models — a repair station releasing a part it has worked on — is the **block 14 path**.
 
-> **The split is enforced in the UI only.** Be clear about this, because an aviation reviewer will
-> check it. The two demo pages offer different Block 11 vocabularies and different signer lists, but
-> they write the **same `Attestation` entry through the same validation**. The record carries no
-> field naming which path it belongs to, and the zome applies no path-specific vocabulary, signer or
-> predecessor rule. Concretely: a repair station can assert `NEW`, a production-approval holder can
-> assert `OVERHAULED`, the block-13 "no predecessor" rule holds only because the form omits the
-> field, and a verifier cannot tell the two paths apart because the record does not say.
+> **The split is part of the record.** `binding.certification_path` names which block set a record
+> represents, and the zome enforces the consequences: the Block 11 vocabulary is partitioned by
+> path, the signer's accreditation must be able to sign that path, and an airworthiness approval may
+> not carry a predecessor certificate. Enforced in the Rust, mirrored in the TypeScript engine, with
+> the negative cases run against a real conductor in CI.
 >
-> Making it real needs three things: a path discriminator on the binding, a vocabulary partitioned
-> by path, and a signer requirement tied to production versus maintenance accreditation. That is
-> outstanding work, and it depends on the same practitioner review as the vocabulary below.
+> It was a UI distinction until 2026-09-01 — the finding the audit that day flagged as the one an
+> aviation reviewer checks first.
 
-That distinction matters for the vocabulary. FAA Order 8130.21J §4-1(k) governs the block 13 path
-and defines Block 11 as exactly three terms: **NEW**, **PROTOTYPE**, **USED**. The block 14 path is
-governed by **AC 43-9, Maintenance Records** instead, where INSPECTED and TESTED are the documented
-terms (FAA 8130-3 Q&A, Q32).
+### Block 11 vocabulary, per path
 
-**Our vocabulary is therefore provisional and mixes both**, plus terms that are ordinary
-maintenance language but appear in neither: OVERHAULED, REPAIRED, MODIFIED. LIFE_LIMITED_SCRAP is
-ours entirely. This is flagged in `demo/src/lib/raf/types.ts` at the definition, so nobody
-mistakes it for settled. Fixing it means reading AC 43-9 with a practitioner, and it is the largest
-piece of domain work outstanding.
+Both documents were reissued in September 2025, and the pair **splits the guidance in two**. This
+is not a modelling choice; it is how the regulator organises the form.
 
-*Sources: FAA Order 8130.21J, effective 2025 (§4-1); FAA Form 8130-3 Q&A, Q32. Both are free
-public downloads from faa.gov.*
+| | Blocks 13a–13e | Blocks 14a–14e |
+|---|---|---|
+| Certifies | Airworthiness approval | Approval for return to service |
+| Governed by | **FAA Order 8130.21J**, 25 Sep 2025 | **AC 43-9D**, 22 Sep 2025 |
+| Under | 14 CFR part 21 | 14 CFR part 43 |
+| Block 11 terms | NEW, PROTOTYPE, USED | OVERHAULED, REPAIRED, INSPECTED, TESTED, MODIFIED |
+| Force of the list | Closed: "Enter one of the terms below" (¶11.k) | Enumerated but advisory: the term "should reflect the kind of work" (Table B-1) |
+| Who signs | A production approval holder (§21.137(o)) | "Only those persons authorized by 14 CFR §43.7(b)–(e)" (¶23.4.1) |
+| Predecessor | None. This path is where a chain begins | Permitted |
+
+8130.21J hands the maintenance case away explicitly (¶5.c): *"Approvals for Return to Service (RTS)
+… refer to AC 43-9, Maintenance Records."* And each document tells the signer to shade out the other
+side's blocks (¶11.r and ¶B.13), while ¶8.k(3) forbids "release of a mixture of production- and
+maintenance-released" articles on one form. **The two halves are mutually exclusive per record**, so
+the model is two variants discriminated by path, not one flat vocabulary with a signer field.
+
+Two term definitions worth carrying, both verbatim:
+
+- **OVERHAULED** — "at least disassembled, cleaned, inspected, repaired as necessary, reassembled,
+  and tested in accordance with the approved standards and technical data" (AC 43-9D Table B-1).
+- Table B-1's note — **"The applicable standard must be described in block 12."** This is why a
+  return to service in this implementation must cite at least one `evidence` entry.
+
+**EASA differs, and that is the point of keeping the vocabulary in DNA properties.** Appendix I to
+Part-21 gives the production side as PROTOTYPE and NEW only — no USED. Appendix II to Part-M gives
+the maintenance side as Overhauled, Repaired, **Inspected/Tested** (one combined term), Modified,
+and says "Enter only one of these terms". A different regulator is a different *install*, not a
+different build.
+
+**One term was removed.** `LIFE_LIMITED_SCRAP` appeared in neither regulator's list, and a release
+certificate is the wrong instrument for it: EASA AMC1 145.A.50(d) says a certificate "should not be
+issued for any item when it is known that the item is unserviceable". Scrapping a life-limited part
+needs its own record type.
+
+**What is still open.** The lists are settled; how an organisation *chooses* between overlapping
+terms in a real shop is not, and AC 43-9D's advisory phrasing leaves whether a term outside Table
+B-1 is non-compliant genuinely unsettled. That is a narrower question than "the vocabulary is
+provisional", which is what this section used to say.
+
+*Sources, all free from faa.gov and eur-lex.europa.eu: FAA Order 8130.21J (25 Sep 2025) ¶11.k,
+¶11.r, ¶5.c, ¶8.k; AC 43-9D (22 Sep 2025) ¶B.11 Table B-1, ¶B.13, ¶B.14, ¶23.4.1; 14 CFR §43.7,
+§43.9; Reg (EU) 748/2012 Annex I Appendix I; Reg (EU) 1321/2014 Annex I Appendix II. Note the
+previously cited "§4-1(k)" was 8130.21H numbering — J renumbered, and AC 43-9C is cancelled.*
 
 **`scope` is the load-bearing field.** The failures this format targets are not forgeries. They
 are assertions made wider than what the signer actually observed. `not_observed` lets a signer
@@ -298,5 +330,7 @@ after revocation    membership=Active  revocation=RevokedAfterAssertion
   per deployment; it cannot tell you whose keys belong there.
 - **Admissibility is unanswered.** Whether a peer-validated record plus a qualified timestamp
   constitutes admissible evidence is a legal question and it blocks reliance, not building.
-- **The assertion vocabulary is a placeholder.** It must be built with airworthiness practitioners.
-  Desk research is not enough, and the current list is illustrative.
+- **The assertion vocabulary is settled as to its terms, not as to its use.** Both lists are now
+  verbatim from the regulator (see 4.1.1). What desk research cannot settle is how a shop chooses
+  between overlapping terms in practice, and whether AC 43-9D Table B-1 is exhaustive or merely
+  illustrative - its own phrasing does not say.

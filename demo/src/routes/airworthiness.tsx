@@ -11,8 +11,9 @@ import { PART_TYPES, RAF_VERSION, type Attestation, type PartType } from "@/lib/
 export const Route = createFileRoute("/airworthiness")({ component: AirworthinessPage });
 
 /**
- * Block 11 for this path, verbatim from FAA Order 8130.21J §4-1(k):
- * "Enter one of the terms below" — and it is a closed list of three.
+ * Block 11 for this path, verbatim from FAA Order 8130.21J (25 Sep 2025)
+ * paragraph 11.k: "Enter one of the terms below" — a closed list of three.
+ * (The old §4-1(k) citation was 8130.21H numbering; J renumbered.)
  */
 const BLOCK_11 = [
   { id: "NEW", note: "a new item in conformity with approved design data" },
@@ -90,10 +91,10 @@ function AirworthinessPage() {
         <section className="rounded-xl bg-surface p-5 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
           <p className="text-sm leading-relaxed text-muted-foreground">
             <span className="text-fg">A manufacturer releasing a part it made.</span> Governed by
-            FAA Order 8130.21J. This is where
-            a chain begins: there is no earlier certificate to point at, because nothing came
-            before it. Issue one here and it becomes selectable as the predecessor back on the
-            return to service form, which is the maintenance side of the same document.
+            FAA Order 8130.21J. This is where a chain begins: there is no earlier certificate to
+            point at, because nothing came before it. Issue one here and it becomes selectable as
+            the predecessor back on the return to service form, which is the maintenance side of the
+            same document.
           </p>
         </section>
 
@@ -133,6 +134,7 @@ function AirworthinessPage() {
                   description: `${partNumber} ${serial}`,
                 },
                 binding: {
+                  certificationPath: "AirworthinessApproval",
                   bindsField: "serial_and_part",
                   documentType: "Faa81303",
                   documentId: docId,
@@ -234,7 +236,7 @@ function AirworthinessPage() {
             </div>
 
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {BLOCK_11.find((b) => b.id === status)?.note}. Order 8130.21J §4-1(k) permits exactly
+              {BLOCK_11.find((b) => b.id === status)?.note}. Order 8130.21J ¶11.k permits exactly
               these three terms on this path — unlike the return-to-service vocabulary, this list is
               not a guess.
             </p>
@@ -252,64 +254,72 @@ function AirworthinessPage() {
             onClick={() => setShowCompare((v) => !v)}
             className="text-sm text-muted-foreground underline underline-offset-4 hover:text-fg"
           >
-            {showCompare ? "Hide the comparison" : "How does this differ from the maintenance path?"}
+            {showCompare
+              ? "Hide the comparison"
+              : "How does this differ from the maintenance path?"}
           </button>
           {showCompare ? (
             <div className="mt-4">
-          <h2 className="mb-3 text-base font-medium">The same form has two paths</h2>
-          <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-            One certificate, two entirely different uses, governed by different rules and signed by
-            different people. Confusing them is the sort of mistake that ends a conversation with an
-            airworthiness engineer, so the demo keeps them on separate pages.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="py-2 pr-4 font-medium"> </th>
-                  <th className="py-2 pr-4 font-medium">Blocks 13a–13e</th>
-                  <th className="py-2 font-medium">Blocks 14a–14e</th>
-                </tr>
-              </thead>
-              <tbody className="text-muted-foreground">
-                <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 text-fg">Purpose</td>
-                  <td className="py-2 pr-4">Airworthiness approval</td>
-                  <td className="py-2">Approval for return to service</td>
-                </tr>
-                <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 text-fg">When</td>
-                  <td className="py-2 pr-4">A part is produced, or exported</td>
-                  <td className="py-2">A part is maintained, repaired or inspected</td>
-                </tr>
-                <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 text-fg">Governed by</td>
-                  <td className="py-2 pr-4">FAA Order 8130.21J</td>
-                  <td className="py-2">AC 43-9, under 14 CFR part 43</td>
-                </tr>
-                <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 text-fg">Block 11 terms</td>
-                  <td className="py-2 pr-4">
-                    <span className="text-fg">NEW, PROTOTYPE, USED</span> — a closed list of three
-                  </td>
-                  <td className="py-2">INSPECTED, TESTED, and maintenance language</td>
-                </tr>
-                <tr>
-                  <td className="py-2 pr-4 text-fg">Predecessor</td>
-                  <td className="py-2 pr-4">
-                    <span className="text-fg">None. This is the birth.</span>
-                  </td>
-                  <td className="py-2">Links back to the previous certificate</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            <span className="text-fg">Why this page exists.</span> The coalition asked for
-            back-to-birth traceability. This path is the birth — the record with no predecessor,
-            where a chain starts. The Workbench shows the middle of a chain; without this page you
-            never see where one begins.
-          </p>
+              <h2 className="mb-3 text-base font-medium">The same form has two paths</h2>
+              <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+                One certificate, two entirely different uses, governed by different rules and signed
+                by different people. Confusing them is the sort of mistake that ends a conversation
+                with an airworthiness engineer, so the demo keeps them on separate pages.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[34rem] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left">
+                      <th className="py-2 pr-4 font-medium"> </th>
+                      <th className="py-2 pr-4 font-medium">Blocks 13a–13e</th>
+                      <th className="py-2 font-medium">Blocks 14a–14e</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 pr-4 text-fg">Purpose</td>
+                      <td className="py-2 pr-4">Airworthiness approval</td>
+                      <td className="py-2">Approval for return to service</td>
+                    </tr>
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 pr-4 text-fg">When</td>
+                      <td className="py-2 pr-4">A part is produced, or exported</td>
+                      <td className="py-2">A part is maintained, repaired or inspected</td>
+                    </tr>
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 pr-4 text-fg">Governed by</td>
+                      <td className="py-2 pr-4">FAA Order 8130.21J</td>
+                      <td className="py-2">AC 43-9D, under 14 CFR part 43</td>
+                    </tr>
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 pr-4 text-fg">Block 11 terms</td>
+                      <td className="py-2 pr-4">
+                        <span className="text-fg">NEW, PROTOTYPE, USED</span> — a closed list of
+                        three
+                      </td>
+                      <td className="py-2">
+                        <span className="text-fg">
+                          OVERHAULED, REPAIRED, INSPECTED, TESTED, MODIFIED
+                        </span>{" "}
+                        — AC 43-9D Table B-1
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-4 text-fg">Predecessor</td>
+                      <td className="py-2 pr-4">
+                        <span className="text-fg">None. This is the birth.</span>
+                      </td>
+                      <td className="py-2">Links back to the previous certificate</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                <span className="text-fg">Why this page exists.</span> The coalition asked for
+                back-to-birth traceability. This path is the birth — the record with no predecessor,
+                where a chain starts. The Workbench shows the middle of a chain; without this page
+                you never see where one begins.
+              </p>
             </div>
           ) : null}
         </section>

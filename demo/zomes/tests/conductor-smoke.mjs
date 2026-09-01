@@ -50,15 +50,13 @@ async function installFor(admin, appId, agent, roots) {
               initial_members: roots,
               max_delegation_depth: 2,
               max_membership_ttl_micros: YEAR_MICROS,
-              assertion_vocabulary: [
-                "NEW",
-                "PROTOTYPE",
-                "USED",
-                "INSPECTED",
+              airworthiness_vocabulary: ["NEW", "PROTOTYPE", "USED"],
+              return_to_service_vocabulary: [
                 "OVERHAULED",
-                "MODIFIED",
                 "REPAIRED",
-                "LIFE_LIMITED_SCRAP",
+                "INSPECTED",
+                "TESTED",
+                "MODIFIED",
               ],
             },
           },
@@ -205,6 +203,7 @@ async function main() {
         description: "CFM56-7B27 turbofan, stage 1 fan disk",
       },
       binding: {
+        certification_path: "ReturnToService",
         binds_field: "serial_and_part",
         document_type: "EasaForm1",
         document_id: "AFX-2026-0142",
@@ -234,6 +233,72 @@ async function main() {
   }
 
   const attHash = attestation.signed_action?.hashed?.hash ?? attestation;
+
+  // 3b. The certification path is enforced, not decorative.
+  //
+  // Blocks 13a-13e and 14a-14e are different documents with different rules.
+  // AC 43-9D ¶B.13 tells a maintenance signer to shade out blocks 13; 8130.21J
+  // ¶11.r says the same of blocks 14; ¶8.k(3) forbids mixing the two on one
+  // form. These three attempts each break one of the resulting rules.
+  const rtsAttestation = (overrides) => ({
+    raf_version: "0.1",
+    subject: {
+      part_type: "Engine",
+      part_number: "CFM56-7B27",
+      serial_number: "577737",
+      description: "CFM56-7B27 turbofan, stage 1 fan disk",
+    },
+    binding: {
+      certification_path: "ReturnToService",
+      binds_field: "serial_and_part",
+      document_type: "EasaForm1",
+      document_id: `AFX-NEG-${Math.random().toString(36).slice(2, 8)}`,
+      document_digest: "sha256:0d5f3c2b9a71e4d8c6b2f014",
+      predecessor_document_hash: null,
+      ...overrides.binding,
+    },
+    scope: { observed: [{ assertion_id: "INSPECTED", value: { Bool: true } }], not_observed: [] },
+    evidence: [
+      { evidence_type: "shop_traveler", digest: "sha256:a1b2c3d4e5f60718293a4b5c", locator: null },
+    ],
+    attester: {
+      agent_pubkey: mroKey,
+      role: "Mro",
+      organisation: "AeroFix MRO Ltd",
+      organisation_id: "UK.145.01234",
+    },
+    membership_proof_hash: membershipHash,
+    anchor: null,
+    ...overrides.top,
+  });
+
+  const refuses = async (label, payload) => {
+    try {
+      await callMro("create_attestation", payload);
+      fail(label);
+    } catch {
+      ok(label);
+    }
+  };
+
+  // NEW belongs to blocks 13. A repair station may not say it on blocks 14.
+  await refuses("airworthiness term rejected on the return to service path", {
+    ...rtsAttestation({ binding: {}, top: {} }),
+    scope: { observed: [{ assertion_id: "NEW", value: { Bool: true } }], not_observed: [] },
+  });
+
+  // A Part-145 maintenance approval cannot sign an airworthiness approval:
+  // that needs a production approval (§21.137(o) / 21.A.163).
+  await refuses("maintenance accreditation refused on the airworthiness path", {
+    ...rtsAttestation({ binding: { certification_path: "AirworthinessApproval" }, top: {} }),
+    scope: { observed: [{ assertion_id: "NEW", value: { Bool: true } }], not_observed: [] },
+  });
+
+  // AC 43-9D Table B-1: "The applicable standard must be described in block 12."
+  await refuses("return to service without a cited standard rejected", {
+    ...rtsAttestation({ binding: {}, top: {} }),
+    evidence: [],
+  });
 
   // Serde renders unit enum variants as plain strings and data-carrying ones as
   // single-key objects. Normalise so the report reads the same either way.
@@ -283,6 +348,7 @@ async function main() {
         description: "CFM56-7B27 turbofan, stage 1 fan disk",
       },
       binding: {
+        certification_path: "ReturnToService",
         binds_field: "serial_and_part",
         document_type: "EasaForm1",
         document_id: "AFX-2026-0142-B",

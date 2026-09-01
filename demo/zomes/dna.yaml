@@ -11,19 +11,43 @@ integrity:
     max_delegation_depth: 2
     # 365 days in microseconds
     max_membership_ttl_micros: 31536000000000
-    # NEW / PROTOTYPE / USED are the real Block 11 terms for the airworthiness
-    # approval path (FAA Order 8130.21J s4-1(k)). The rest are return-to-service
-    # language and remain provisional.
-    assertion_vocabulary:
+    # Block 11 is partitioned by which certification block set is signed, so
+    # there are two lists, not one. Both are taken verbatim from the regulator.
+    #
+    # This deployment is configured for the FAA. EASA's lists differ - its
+    # production side is PROTOTYPE / NEW only (no USED), and its maintenance side
+    # combines "Inspected/Tested" into a single term (Appendix I to Part-21 and
+    # Appendix II to Part-M respectively). That is precisely why the vocabulary
+    # lives in DNA properties rather than in the wasm: a different regulator is a
+    # different install, not a different build.
+
+    # Blocks 13a-13e. FAA Order 8130.21J (25 Sep 2025) para 11.k: "Enter one of
+    # the terms below" - closed and mandatory.
+    #   NEW       - a new item in conformity with approved design data
+    #   PROTOTYPE - a new item in conformity with non-approved design data
+    #   USED      - a used item for export, having time in service
+    airworthiness_vocabulary:
       - NEW
       - PROTOTYPE
       - USED
+
+    # Blocks 14a-14e. AC 43-9D (22 Sep 2025) Table B-1. Phrased with "should"
+    # and explicitly case-insensitive, so enumerated but advisory in the source.
+    # The note under the table: "The applicable standard must be described in
+    # block 12" - which is why this DNA requires a return to service to cite at
+    # least one evidence entry.
+    #
+    # LIFE_LIMITED_SCRAP was here and has been removed. It appears in neither
+    # regulator's list, and a release certificate is the wrong instrument for it:
+    # EASA AMC1 145.A.50(d) says a certificate "should not be issued for any item
+    # when it is known that the item is unserviceable". Scrapping a life-limited
+    # part needs its own record type, not a Block 11 term.
+    return_to_service_vocabulary:
+      - OVERHAULED
+      - REPAIRED
       - INSPECTED
       - TESTED
-      - OVERHAULED
       - MODIFIED
-      - REPAIRED
-      - LIFE_LIMITED_SCRAP
   zomes:
     - name: aviation_attestation_integrity
       path: "target/wasm32-unknown-unknown/release/aviation_attestation_integrity.wasm"

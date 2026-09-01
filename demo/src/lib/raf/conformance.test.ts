@@ -93,6 +93,7 @@ function scenario() {
       description: "CFM56-7B27 turbofan, stage 1 fan disk",
     },
     binding: {
+      certificationPath: "ReturnToService",
       bindsField: "serial_and_part",
       documentType: "EasaForm1",
       documentId,

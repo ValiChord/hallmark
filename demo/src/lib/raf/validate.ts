@@ -1,9 +1,11 @@
 import {
+  accreditationMaySign,
   allowedNewAccreditation,
   assertionValueEqual,
   BINDS_FIELDS,
   RAF_VERSION,
   roleMatchesAccreditation,
+  vocabularyFor,
   type Attestation,
   type CounterAttestation,
   type DnaProperties,
@@ -216,19 +218,47 @@ function validateAttestation(
     }
   }
 
+  // Block 11 is partitioned by certification path. A term from the other path
+  // is not a near-miss — it is a claim the signer has no authority to make.
+  const path = attestation.binding.certificationPath;
+  const vocabulary = vocabularyFor(lookup.dna, path);
+  const pathName = path === "AirworthinessApproval" ? "blocks 13a-13e" : "blocks 14a-14e";
+
   const seen = new Set<string>();
   for (const a of attestation.scope.observed) {
-    if (!lookup.dna.assertionVocabulary.includes(a.assertionId)) {
-      return bad(`assertion '${a.assertionId}' is not in the DNA vocabulary`);
+    if (!vocabulary.includes(a.assertionId)) {
+      return bad(`assertion '${a.assertionId}' is not permitted on ${pathName}`);
     }
     if (seen.has(a.assertionId)) return bad(`duplicate observed assertion '${a.assertionId}'`);
     seen.add(a.assertionId);
   }
   for (const id of attestation.scope.notObserved) {
-    if (!lookup.dna.assertionVocabulary.includes(id)) {
-      return bad(`not_observed '${id}' is not in the DNA vocabulary`);
+    if (!vocabulary.includes(id)) {
+      return bad(`not_observed '${id}' is not permitted on ${pathName}`);
     }
     if (seen.has(id)) return bad(`'${id}' cannot be both observed and not_observed`);
+  }
+
+  if (path === "AirworthinessApproval") {
+    // 8130.21J ¶11.k: "Enter one of the terms below" — and the form has one Block 11.
+    if (attestation.scope.observed.length !== 1) {
+      return bad("the airworthiness path takes exactly one Block 11 term");
+    }
+    // This path is where a chain begins; there is no earlier certificate.
+    if (attestation.binding.predecessorDocumentHash) {
+      return bad("an airworthiness approval cannot have a predecessor certificate");
+    }
+  } else {
+    if (attestation.scope.observed.length === 0) {
+      return bad("the return to service path requires a Block 11 term");
+    }
+    // AC 43-9D Table B-1 note: "The applicable standard must be described in
+    // block 12." Our nearest field is evidence.
+    if (attestation.evidence.length === 0) {
+      return bad(
+        "a return to service must cite the applicable standard (at least one evidence entry)",
+      );
+    }
   }
 
   const mRec = lookup.get(attestation.membershipProofHash);
@@ -249,6 +279,14 @@ function validateAttestation(
   }
   if (action.timestamp < mRec.timestamp) return bad("membership issued after this attestation");
   if (action.timestamp > membership.value.expiresAt) return bad("membership expired");
+  // The signer must hold an accreditation that can sign THIS path. Without it
+  // the discriminator is decoration: a repair station could file an
+  // airworthiness approval simply by setting the field.
+  if (!accreditationMaySign(membership.value.accreditation.accreditationType, path)) {
+    return bad(
+      `${membership.value.accreditation.accreditationType} may not sign ${pathName}`,
+    );
+  }
 
   const walk = walkToRoot(attestation.membershipProofHash, lookup);
   if (!walk.ok) return walk;

@@ -45,16 +45,8 @@ const fail = (m, e) => {
   if (e) console.error(String(e?.message ?? e).slice(0, 500));
 };
 
-const VOCAB = [
-  "NEW",
-  "PROTOTYPE",
-  "USED",
-  "INSPECTED",
-  "OVERHAULED",
-  "MODIFIED",
-  "REPAIRED",
-  "LIFE_LIMITED_SCRAP",
-];
+const AIRWORTHINESS_VOCAB = ["NEW", "PROTOTYPE", "USED"];
+const RTS_VOCAB = ["OVERHAULED", "REPAIRED", "INSPECTED", "TESTED", "MODIFIED"];
 
 /** Poll until `fn` returns something truthy, or give up. Gossip is not instant. */
 async function until(label, fn, timeoutMs = GOSSIP_TIMEOUT_MS) {
@@ -104,7 +96,8 @@ async function install(admin, appId, agent, roots) {
               initial_members: roots,
               max_delegation_depth: 2,
               max_membership_ttl_micros: YEAR,
-              assertion_vocabulary: VOCAB,
+              airworthiness_vocabulary: AIRWORTHINESS_VOCAB,
+              return_to_service_vocabulary: RTS_VOCAB,
             },
           },
         },
@@ -224,6 +217,7 @@ async function main() {
       description: "CFM56-7B27 turbofan, stage 1 fan disk",
     },
     binding: {
+      certification_path: "ReturnToService",
       binds_field: "serial_and_part",
       document_type: "EasaForm1",
       document_id: `AFX-${RUN}-0142`,

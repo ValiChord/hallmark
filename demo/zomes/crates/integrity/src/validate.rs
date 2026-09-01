@@ -299,11 +299,23 @@ fn validate_attestation(
         }
     }
 
+    // Block 11 is partitioned by certification path. The two lists are disjoint
+    // in the regulator's own documents, and a term from the wrong one is not a
+    // near-miss — it is a claim the signer has no authority to make.
+    let (vocabulary, path_name) = match attestation.binding.certification_path {
+        CertificationPath::AirworthinessApproval => {
+            (&props.airworthiness_vocabulary, "blocks 13a-13e")
+        }
+        CertificationPath::ReturnToService => {
+            (&props.return_to_service_vocabulary, "blocks 14a-14e")
+        }
+    };
+
     let mut seen_ids: HashSet<&str> = HashSet::new();
     for assertion in &attestation.scope.observed {
-        if !props.assertion_vocabulary.contains(&assertion.assertion_id) {
+        if !vocabulary.contains(&assertion.assertion_id) {
             return invalid(format!(
-                "assertion '{}' is not in the DNA vocabulary",
+                "assertion '{}' is not permitted on {path_name}",
                 assertion.assertion_id
             ));
         }
@@ -315,11 +327,39 @@ fn validate_attestation(
         }
     }
     for id in &attestation.scope.not_observed {
-        if !props.assertion_vocabulary.contains(id) {
-            return invalid(format!("not_observed '{id}' is not in the DNA vocabulary"));
+        if !vocabulary.contains(id) {
+            return invalid(format!("not_observed '{id}' is not permitted on {path_name}"));
         }
         if seen_ids.contains(id.as_str()) {
             return invalid(format!("'{id}' cannot be both observed and not_observed"));
+        }
+    }
+
+    match attestation.binding.certification_path {
+        CertificationPath::AirworthinessApproval => {
+            // 8130.21J ¶11.k: "Enter one of the terms below" — one term, and the
+            // form has one Block 11.
+            if attestation.scope.observed.len() != 1 {
+                return invalid("the airworthiness path takes exactly one Block 11 term");
+            }
+            // This path is where a chain begins: the article is being released
+            // by whoever produced it, so there is no earlier certificate for it.
+            if attestation.binding.predecessor_document_hash.is_some() {
+                return invalid("an airworthiness approval cannot have a predecessor certificate");
+            }
+        }
+        CertificationPath::ReturnToService => {
+            if attestation.scope.observed.is_empty() {
+                return invalid("the return to service path requires a Block 11 term");
+            }
+            // AC 43-9D Table B-1 note: "The applicable standard must be
+            // described in block 12." Our nearest field is `evidence`, so a
+            // return to service must cite at least one.
+            if attestation.evidence.is_empty() {
+                return invalid(
+                    "a return to service must cite the applicable standard (at least one evidence entry)",
+                );
+            }
         }
     }
 
@@ -345,6 +385,18 @@ fn validate_attestation(
     }
     if at > membership.expires_at {
         return invalid("membership expired");
+    }
+    // The signer must hold an accreditation that can sign *this* path. Without
+    // this the path discriminator is decoration: a repair station could file an
+    // airworthiness approval simply by setting the field.
+    if !accreditation_may_sign(
+        &membership.accreditation.accreditation_type,
+        &attestation.binding.certification_path,
+    ) {
+        return invalid(format!(
+            "{:?} may not sign {:?}",
+            membership.accreditation.accreditation_type, attestation.binding.certification_path
+        ));
     }
 
     if let Err(inv) = walk_membership_to_root(

@@ -98,6 +98,7 @@ export function sampleInspect(state: EngineState): Attestation | null {
       description: "CFM56-7B27 turbofan, stage 1 fan disk",
     },
     binding: {
+      certificationPath: "ReturnToService",
       bindsField: "serial_and_part",
       documentType: "EasaForm1",
       documentId: "AFX-2026-0142",
@@ -155,7 +156,11 @@ export function sampleConflict(state: EngineState): Attestation | null {
   };
 }
 
-export function runHappyPath(state: EngineState): { inspect?: string; overhaul?: string; error?: string } {
+export function runHappyPath(state: EngineState): {
+  inspect?: string;
+  overhaul?: string;
+  error?: string;
+} {
   const inspect = sampleInspect(state);
   if (!inspect) return { error: "seed the network first" };
   const a = createAttestation(state, inspect);

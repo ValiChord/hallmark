@@ -394,10 +394,16 @@ pub fn verify_attestation(attestation_hash: ActionHash) -> ExternResult<Verifica
     }
 
     // Scope (observed + not_observed). Integrity already rejects unknown IDs;
-    // we still surface them here so the report is complete.
+    // we still surface them here so the report is complete. The vocabulary is
+    // the one for this record's certification path — a term that is valid on the
+    // other path is not valid here.
+    let path_vocabulary = match attestation.binding.certification_path {
+        CertificationPath::AirworthinessApproval => &props.airworthiness_vocabulary,
+        CertificationPath::ReturnToService => &props.return_to_service_vocabulary,
+    };
     let mut scope = Vec::new();
     for assertion in &attestation.scope.observed {
-        let in_vocabulary = props.assertion_vocabulary.contains(&assertion.assertion_id);
+        let in_vocabulary = path_vocabulary.contains(&assertion.assertion_id);
         if !in_vocabulary {
             historically_valid = false;
             currently_trusted = false;
@@ -408,7 +414,7 @@ pub fn verify_attestation(attestation_hash: ActionHash) -> ExternResult<Verifica
         });
     }
     for id in &attestation.scope.not_observed {
-        let in_vocabulary = props.assertion_vocabulary.contains(id);
+        let in_vocabulary = path_vocabulary.contains(id);
         if !in_vocabulary {
             historically_valid = false;
             currently_trusted = false;

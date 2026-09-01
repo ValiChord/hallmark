@@ -9,7 +9,14 @@ use hdi::prelude::*;
 #[derive(Clone)]
 pub struct DnaProperties {
     pub initial_members: Vec<AgentPubKeyB64>,
-    pub assertion_vocabulary: Vec<String>,
+    /// Block 11 terms for the **blocks 13a-13e** path. FAA Order 8130.21J
+    /// para 11.k: "Enter one of the terms below" - a closed, mandatory list.
+    pub airworthiness_vocabulary: Vec<String>,
+    /// Block 11 terms for the **blocks 14a-14e** path. AC 43-9D Table B-1.
+    /// Phrased with "should", so enumerated but advisory in the source; this
+    /// DNA enforces it as a list because a shared vocabulary is the point of
+    /// having a format at all.
+    pub return_to_service_vocabulary: Vec<String>,
     pub max_delegation_depth: u8,
     /// Inclusive upper bound on `expires_at - issued_at` for a membership.
     /// Short TTLs are how this DNA approximates revocation for *future* creates:
@@ -54,9 +61,14 @@ impl DnaProperties {
                 "max_membership_ttl_micros must be > 0".into(),
             );
         }
-        if self.assertion_vocabulary.is_empty() {
+        if self.airworthiness_vocabulary.is_empty() {
             return ValidateCallbackResult::Invalid(
-                "assertion_vocabulary cannot be empty".into(),
+                "airworthiness_vocabulary cannot be empty".into(),
+            );
+        }
+        if self.return_to_service_vocabulary.is_empty() {
+            return ValidateCallbackResult::Invalid(
+                "return_to_service_vocabulary cannot be empty".into(),
             );
         }
         ValidateCallbackResult::Valid

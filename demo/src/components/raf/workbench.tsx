@@ -25,16 +25,13 @@ import {
   type EngineResult,
   type EngineState,
 } from "@/lib/raf/engine";
-import {
-  runHappyPath,
-  sampleConflict,
-  sampleInspect,
-} from "@/lib/raf/demo";
+import { runHappyPath, sampleConflict, sampleInspect } from "@/lib/raf/demo";
 import { useRaf } from "@/lib/raf/store";
 import {
   ACCREDITATION_TYPES,
   AGREEMENT_STATUSES,
   ASSERTION_VOCABULARY,
+  RETURN_TO_SERVICE_VOCABULARY,
   ATTESTER_ROLES,
   DOCUMENT_TYPES,
   PART_TYPES,
@@ -62,14 +59,14 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 /**
- * Block 11 terms belonging to THIS path. The DNA vocabulary covers both paths,
- * because both live on one network — but a return-to-service form must not
- * offer NEW, PROTOTYPE or USED, which are the airworthiness path (FAA Order
- * 8130.21J s4-1(k)). Offering them here would contradict the page.
+ * Block 11 terms for this path, verbatim from AC 43-9D (22 Sep 2025) Table B-1.
+ *
+ * This used to be "the whole vocabulary, minus the three airworthiness terms" —
+ * a filter, which meant the page depended on the other path's list to define its
+ * own. The two lists are now separate in the DNA, as they are in the regulator's
+ * own documents, and the zome rejects a term from the wrong one.
  */
-const RETURN_TO_SERVICE_STATUS = ASSERTION_VOCABULARY.filter(
-  (a) => !(["NEW", "PROTOTYPE", "USED"] as readonly string[]).includes(a),
-);
+const RETURN_TO_SERVICE_STATUS = RETURN_TO_SERVICE_VOCABULARY;
 
 /** One plain sentence per tab. Nobody should have to guess what a screen is for. */
 const TAB_BLURBS: Record<Tab, string> = {
@@ -145,22 +142,22 @@ export function Workbench() {
               Approval for return to service
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              A repair station releasing a part it has worked on. Governed by AC 43-9, under
-              14 CFR part 43.
+              A repair station releasing a part it has worked on. Governed by AC 43-9D, under 14 CFR
+              part 43.
             </p>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
               <span className="text-fg">There are two forms, on two pages.</span> A part is also
               certified when it is manufactured — that is the{" "}
-              <span className="text-fg">airworthiness form</span>, blocks 13a–13e, and it is where
-              a chain begins. Same document, different rules, different signer.
+              <span className="text-fg">airworthiness form</span>, blocks 13a–13e, and it is where a
+              chain begins. Same document, different rules, different signer.
             </p>
             <p className="mt-2 max-w-xl text-sm">
               <span className="font-medium text-fg">
                 These rules are running in your browser, not on a network.
               </span>{" "}
               <span className="text-muted-foreground">
-                Every check you see below is the same logic as the Holochain zome —
-                read the Rust it mirrors under{" "}
+                Every check you see below is the same logic as the Holochain zome — read the Rust it
+                mirrors under{" "}
               </span>
               <Link to="/source" className="underline underline-offset-4 hover:text-fg">
                 Zome source
@@ -303,8 +300,8 @@ export function Workbench() {
               </Button>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Inspect then overhaul is normal MRO work. Two opposite values for the same
-              assertion, with no predecessor, is fraud.
+              Inspect then overhaul is normal MRO work. Two opposite values for the same assertion,
+              with no predecessor, is fraud.
             </p>
           </section>
 
@@ -362,22 +359,22 @@ export function Workbench() {
                 </p>
                 {showIntroMore ? (
                   <>
-                <p>
-                  <span className="text-fg">Who runs it?</span> Nobody yet — and that is the honest
-                  open question, not a gap in the demo. The root authorities are set when the
-                  network is installed, not compiled into the software, so the same build can run
-                  under the FAA, under EASA, under a coalition secretariat, or under a foundation.
-                  Deciding whose keys those are is a governance question and it has not been
-                  answered.
-                </p>
-                <p>
-                  The same certificate has{" "}
-                  <span className="text-fg">two entirely different uses</span> — one for a part
-                  being manufactured, one for a part being maintained — governed by different rules
-                  and signed by different people. This page is the maintenance one. The other is
-                  under <span className="text-fg">Airworthiness form</span>, and it is where a
-                  chain begins.
-                </p>
+                    <p>
+                      <span className="text-fg">Who runs it?</span> Nobody yet — and that is the
+                      honest open question, not a gap in the demo. The root authorities are set when
+                      the network is installed, not compiled into the software, so the same build
+                      can run under the FAA, under EASA, under a coalition secretariat, or under a
+                      foundation. Deciding whose keys those are is a governance question and it has
+                      not been answered.
+                    </p>
+                    <p>
+                      The same certificate has{" "}
+                      <span className="text-fg">two entirely different uses</span> — one for a part
+                      being manufactured, one for a part being maintained — governed by different
+                      rules and signed by different people. This page is the maintenance one. The
+                      other is under <span className="text-fg">Airworthiness form</span>, and it is
+                      where a chain begins.
+                    </p>
                   </>
                 ) : null}
                 <button
@@ -423,10 +420,7 @@ export function Workbench() {
               state={dht}
               actor={actor.pubkey}
               onSubmit={(proof) =>
-                run(
-                  (s) => issueMembership(s, actor.pubkey, proof),
-                  "Membership committed.",
-                )
+                run((s) => issueMembership(s, actor.pubkey, proof), "Membership committed.")
               }
             />
           ) : null}
@@ -473,13 +467,7 @@ function DnaCard({ state }: { state: EngineState }) {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
@@ -548,12 +536,16 @@ function IssueForm({
     >
       <h2 className="text-lg font-medium">Issue membership</h2>
       <p className="text-sm text-muted-foreground">
-        Roots grant any mapped accreditation. Non-roots only grant along the OEM matrix,
-        and only if they hold a live membership.
+        Roots grant any mapped accreditation. Non-roots only grant along the OEM matrix, and only if
+        they hold a live membership.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Subject">
-          <select className={selectClass} value={subject} onChange={(e) => setSubject(e.target.value)}>
+          <select
+            className={selectClass}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          >
             {subjects.map((a) => (
               <option key={a.pubkey} value={a.pubkey}>
                 {a.name}
@@ -637,8 +629,8 @@ function AttestForm({
     return (
       <div className="rounded-xl bg-surface p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
         {agent?.name ?? "This agent"} has no membership. Airlines, brokers, and lessors
-        counter-attest instead — switch to Verify and file a counter, or issue membership
-        from a root / OEM.
+        counter-attest instead — switch to Verify and file a counter, or issue membership from a
+        root / OEM.
       </div>
     );
   }
@@ -659,6 +651,7 @@ function AttestForm({
             description: `${partNumber} ${serial}`,
           },
           binding: {
+            certificationPath: "ReturnToService",
             bindsField: "serial_and_part",
             documentType: docType,
             documentId: docId,
@@ -686,9 +679,9 @@ function AttestForm({
       </p>
       <p className="text-sm leading-relaxed text-muted-foreground">
         Fields carry their block numbers on FAA Form 8130-3. This is the{" "}
-        <span className="text-fg">approval for return to service</span> path — blocks 14a–14e,
-        the maintenance case — not the airworthiness approval path in blocks 13a–13e. The
-        organisation in Block 4 comes from the accreditation, not from this form.
+        <span className="text-fg">approval for return to service</span> path — blocks 14a–14e, the
+        maintenance case — not the airworthiness approval path in blocks 13a–13e. The organisation
+        in Block 4 comes from the accreditation, not from this form.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Part type">
@@ -710,7 +703,11 @@ function AttestForm({
           />
         </Field>
         <Field label="Serial number · Block 10">
-          <input className={inputClass} value={serial} onChange={(e) => setSerial(e.target.value)} />
+          <input
+            className={inputClass}
+            value={serial}
+            onChange={(e) => setSerial(e.target.value)}
+          />
         </Field>
         <Field label="Form">
           <select
@@ -735,7 +732,11 @@ function AttestForm({
           />
         </Field>
         <Field label="Status / work · Block 11">
-          <select className={selectClass} value={assertion} onChange={(e) => setAssertion(e.target.value)}>
+          <select
+            className={selectClass}
+            value={assertion}
+            onChange={(e) => setAssertion(e.target.value)}
+          >
             {RETURN_TO_SERVICE_STATUS.map((a) => (
               <option key={a}>{a}</option>
             ))}
@@ -789,8 +790,8 @@ function AttestForm({
           })}
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Absence is never assent. Marking an item here records that it was outside what this
-          signer personally saw — the difference between “not claimed” and “claimed false”.
+          Absence is never assent. Marking an item here records that it was outside what this signer
+          personally saw — the difference between “not claimed” and “claimed false”.
         </p>
       </Field>
       <Button type="submit" className="self-start">
@@ -832,18 +833,14 @@ function RevokeForm({
             ? { kind, assertionId }
             : { kind: kind as Exclude<RevocationGrounds["kind"], "ConflictingAssertions"> };
         const evidence =
-          kind === "Administrative"
-            ? []
-            : kind === "DuplicateCertIssuance"
-              ? [a, b]
-              : [a, b];
+          kind === "Administrative" ? [] : kind === "DuplicateCertIssuance" ? [a, b] : [a, b];
         onSubmit({ membershipHash: mem, grounds, evidenceHashes: evidence });
       }}
     >
       <h2 className="text-lg font-medium">Revoke membership</h2>
       <p className="text-sm text-muted-foreground">
-        Administrative: issuer or root. Evidence grounds: anyone who can present the hashes.
-        Time is the action timestamp — there is no author-set <span className="font-mono">decided_at</span>.
+        Administrative: issuer or root. Evidence grounds: anyone who can present the hashes. Time is
+        the action timestamp — there is no author-set <span className="font-mono">decided_at</span>.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Membership">
@@ -1080,13 +1077,13 @@ function ReportCard({ report }: { report: VerificationReport }) {
             What the signer put on the record — both what they checked and what they explicitly did
             not. Each one has to come from the agreed vocabulary; free text is not an assertion.
           </p>
-        <ul className="flex flex-wrap gap-2">
-          {report.scope.map((s) => (
-            <Badge key={s.assertionId} variant={s.inVocabulary ? "ok" : "danger"}>
-              {s.assertionId}
-            </Badge>
-          ))}
-        </ul>
+          <ul className="flex flex-wrap gap-2">
+            {report.scope.map((s) => (
+              <Badge key={s.assertionId} variant={s.inVocabulary ? "ok" : "danger"}>
+                {s.assertionId}
+              </Badge>
+            ))}
+          </ul>
         </>
       ) : null}
       {report.counters.length > 0 ? (

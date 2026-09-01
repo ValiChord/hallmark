@@ -5,6 +5,7 @@ import {
   type MembershipProof,
   type MembershipRevocation,
   type RevocationGrounds,
+  vocabularyFor,
 } from "./types";
 import { lookup, type EngineState } from "./engine";
 import type { Lookup } from "./validate";
@@ -251,9 +252,12 @@ export function verifyAttestation(
 
   // Scope (observed + not_observed). Integrity already rejects unknown IDs;
   // surface both here so the report is complete.
+  // The vocabulary for THIS record's path. A term valid on the other path is
+  // not valid here.
+  const pathVocabulary = vocabularyFor(state.dna, attestation.binding.certificationPath);
   const scope: { assertionId: string; inVocabulary: boolean }[] = [];
   for (const a of attestation.scope.observed) {
-    const inVocabulary = state.dna.assertionVocabulary.includes(a.assertionId);
+    const inVocabulary = pathVocabulary.includes(a.assertionId);
     if (!inVocabulary) {
       historicallyValid = false;
       currentlyTrusted = false;
@@ -261,7 +265,7 @@ export function verifyAttestation(
     scope.push({ assertionId: a.assertionId, inVocabulary });
   }
   for (const id of attestation.scope.notObserved ?? []) {
-    const inVocabulary = state.dna.assertionVocabulary.includes(id);
+    const inVocabulary = pathVocabulary.includes(id);
     if (!inVocabulary) {
       historicallyValid = false;
       currentlyTrusted = false;

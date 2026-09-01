@@ -92,6 +92,7 @@ This single rule is the difference between a useful record and a signed rubber s
     "description": "CFM56-7B27 turbofan, stage 1 fan disk"
   },
   "binding": {
+    "certification_path": "ReturnToService",
     "binds_field": "serial_and_part",
     "document_type": "EasaForm1",
     "document_id": "AFX-2026-0142",
@@ -125,6 +126,27 @@ exactly there.
 
 `predecessor_document_hash` is how the Chapter 16 chain is expressed. Where present, the
 predecessor **MUST** concern the same part and **MUST** be strictly earlier.
+
+Note what is *not* required: a certificate **MUST NOT** be assumed to reference its predecessor.
+Neither regulator requires an ordinary serviceable release to cite the one before it — the chain is
+mandated only for corrections, re-certifications, and items with no prior release. A profile that
+made the predecessor mandatory would be over-constraining the regulation.
+
+### 4.0 The certification path
+
+`certification_path` **MUST** be present, and **MUST** be one of `AirworthinessApproval` (the
+production side of the release certificate) or `ReturnToService` (the maintenance side).
+
+The two are different documents with different rules. A profile **MUST** define, per path:
+
+- the closed assertion vocabulary for that path;
+- which accreditations may sign it;
+- whether a predecessor certificate is permitted.
+
+A record **MUST NOT** claim both. Both FAA and EASA instruct a signer to shade out the other side's
+certification blocks, and both forbid a mixture of production- and maintenance-released items on one
+certificate. A single flat vocabulary with a separate signer field admits combinations the
+regulators exclude, and **MUST NOT** be used.
 
 ### 4.1 Encoding
 
@@ -350,7 +372,8 @@ conductors, in CI on every push — see `docs/TECHNICAL-REFERENCE.md`:
 
 §2 attestation structure · §3 scope, including `not_observed` · §6 root accreditation and refusal of
 a non-root issuer · §7 revocation on `ConflictingAssertions` and `Administrative` grounds · §9 the
-validation/verification split · §10 verification and the two answers.
+validation/verification split · §10 verification and the two answers · the blocks 13/14 split, with
+the vocabulary, signer authority and predecessor rules enforced per path.
 
 **Implemented and enforced, but not covered by an automated test:** counter-attestation ·
 delegation past depth 1 · the delegation matrix · depth limits · membership expiry · expiry
@@ -369,8 +392,7 @@ demonstrates them running, so a regression in any of them would be silent.
 - **§10 step 3 — checking the document digest against a presented document.** `verify_attestation`
   takes only an `ActionHash`; there is no parameter through which a document could be supplied. The
   digest is checked for shape, not against anything.
-- **The blocks 13 / 14 split as a property of the format.** It is currently enforced in the demo UI
-  only; the record carries no path discriminator. See `docs/TECHNICAL-REFERENCE.md` §4.1.1.
+
 - **§4.1 SD-JWT VC encoding.** The reference implementation uses its platform's native encoding;
   the SD-JWT VC representation is unwritten.
 

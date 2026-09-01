@@ -40,8 +40,39 @@ pub enum PartType {
     Standard,
 }
 
+/// Which certification path of the release certificate this record represents.
+///
+/// FAA Form 8130-3 carries two mutually exclusive certification block sets, and
+/// the regulator treats them as different documents with different rules,
+/// different signers and different Block 11 vocabularies:
+///
+/// - **Blocks 13a–13e, Airworthiness Approval.** FAA Order 8130.21J (25 Sep
+///   2025), which covers only articles produced under 14 CFR part 21.
+/// - **Blocks 14a–14e, Approval for Return to Service.** AC 43-9D (22 Sep
+///   2025), for work performed under 14 CFR part 43.
+///
+/// They may not both appear on one form: AC 43-9D ¶B.13 tells the maintenance
+/// signer to "Shade, darken, or otherwise mark" blocks 13a–13e "to preclude
+/// inadvertent or unauthorized use", 8130.21J ¶11.r says the same of 14a–14e,
+/// and ¶8.k(3) forbids "release of a mixture of production- and
+/// maintenance-released" articles on one form.
+///
+/// Until 2026-09-01 this distinction lived only in the demo's two pages. It is
+/// now part of the record, because a verifier that cannot tell the paths apart
+/// cannot apply either path's rules.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum CertificationPath {
+    /// Blocks 13a–13e. A production approval holder releasing what it made.
+    AirworthinessApproval,
+    /// Blocks 14a–14e. Work under part 43, released by a §43.7(b)–(e) person.
+    ReturnToService,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Binding {
+    /// Which set of certification blocks this record represents. Governs the
+    /// permitted vocabulary, who may sign, and whether a predecessor is allowed.
+    pub certification_path: CertificationPath,
     /// One of `serial_number`, `part_number`, `serial_and_part`.
     pub binds_field: String,
     pub document_type: DocumentType,
@@ -253,6 +284,41 @@ pub fn role_matches_accreditation(accred: &AccreditationType, role: &AttesterRol
             | (DistributorAccredited, Distributor)
             | (FaaPma, Oem)
             | (EasaPart21g, Oem)
+    )
+}
+
+/// Which certification path an accreditation may sign.
+///
+/// The two paths have different signer populations, and neither regulator lets
+/// one accreditation cover both:
+///
+/// - **Airworthiness approval (blocks 13).** A production approval. FAA: a
+///   production approval holder issuing under 14 CFR §21.137(o). EASA: a Part-21
+///   production organisation under 21.A.163, or 21.A.130 with competent-authority
+///   validation.
+/// - **Return to service (blocks 14).** AC 43-9D: "Only those persons authorized
+///   by 14 CFR §43.7(b)-(e) may issue FAA Form 8130-3 for approval for return to
+///   service." EASA: Part-145 certifying staff under 145.A.50.
+///
+/// A distributor holds neither. Under 8130.21J ¶11.l(2) a distributor re-issuing
+/// a form adds a traceability statement naming the producer — it does not
+/// certify the article itself, so it signs no certification block here.
+///
+/// Honest caveat: the regulations partition this **by construction rather than
+/// by prohibition**. No sentence says "NEW is forbidden in block 14". The
+/// partition follows from each appendix declaring its own list exhaustive for
+/// its own purpose, each shading out the other block set, and both forbidding a
+/// mixture of production- and maintenance-released items on one certificate.
+pub fn accreditation_may_sign(accred: &AccreditationType, path: &CertificationPath) -> bool {
+    use AccreditationType::*;
+    use CertificationPath::*;
+    matches!(
+        (accred, path),
+        (FaaPma, AirworthinessApproval)
+            | (EasaPart21g, AirworthinessApproval)
+            | (OemAuthorized, AirworthinessApproval)
+            | (FaaRepairStation, ReturnToService)
+            | (EasaPart145, ReturnToService)
     )
 }
 
