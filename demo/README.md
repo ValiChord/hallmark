@@ -60,8 +60,11 @@ Creates an `Attestation`. The form's fields map one-to-one onto the entry:
 they are assertions made wider than what the signer actually saw. Recording what was *not* checked
 means absence can never be read as assent.
 
-The document digest is editable so the tamper case is reachable: two attestations sharing a
-document id but differing in digest is the `DuplicateDocument` revocation ground.
+The document digest is editable so the tamper case is reachable. Note what the rule actually keys
+on, though: `DuplicateDocument` fires on two attestations by the same signer sharing a
+`document_type` and `document_id`. **The digest is not examined** — two attestations with identical
+digests trigger it just as well, and a corrected form correctly linked to the one it supersedes is
+excluded.
 
 ### Revoke
 

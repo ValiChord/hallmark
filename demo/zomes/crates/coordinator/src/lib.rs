@@ -281,6 +281,8 @@ pub fn complete_key_rotation(input: CompleteRotationInput) -> ExternResult<Recor
             old.issuer_membership_hash.clone()
         },
         predecessor_membership_hash: Some(handoff.old_membership_hash.clone()),
+        rotation_handoff_hash: Some(input.handoff_hash.clone()),
+        rotation_acceptance_hash: Some(input.acceptance_hash.clone()),
         depth: if root_reissue { 1 } else { old.depth },
     };
 

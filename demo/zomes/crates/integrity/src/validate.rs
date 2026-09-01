@@ -142,6 +142,41 @@ fn validate_membership(
         if pred.agent_pubkey == proof.agent_pubkey {
             return invalid("key rotation predecessor is the same agent");
         }
+
+        // The old key must have consented, and the new key accepted. Without
+        // this a rotation is simply an assertion by the issuer, and the
+        // DuplicateCertIssuance carve-out makes that assertion unchallengeable.
+        let (Some(handoff_hash), Some(acceptance_hash)) = (
+            proof.rotation_handoff_hash.clone(),
+            proof.rotation_acceptance_hash.clone(),
+        ) else {
+            return invalid("a key rotation requires both a handoff and an acceptance");
+        };
+        let handoff_record = must_get_valid_record(handoff_hash.clone())?;
+        let handoff = match require_app_entry::<KeyHandoff>(&handoff_record)? {
+            Ok(h) => h,
+            Err(inv) => return Ok(inv),
+        };
+        let acceptance_record = must_get_valid_record(acceptance_hash)?;
+        let acceptance = match require_app_entry::<KeyAcceptance>(&acceptance_record)? {
+            Ok(a) => a,
+            Err(inv) => return Ok(inv),
+        };
+        if &handoff.old_membership_hash != pred_hash {
+            return invalid("handoff does not point at the predecessor membership");
+        }
+        if acceptance.handoff_hash != handoff_hash {
+            return invalid("acceptance does not point at this handoff");
+        }
+        if handoff_record.action().author() != &pred.agent_pubkey {
+            return invalid("handoff was not authored by the key being replaced");
+        }
+        if handoff.new_key != proof.agent_pubkey {
+            return invalid("handoff names a different new key");
+        }
+        if acceptance_record.action().author() != &proof.agent_pubkey {
+            return invalid("acceptance was not authored by the new key");
+        }
     }
 
     match &proof.issuer_membership_hash {

@@ -24,9 +24,10 @@ export const ASSERTION_VOCABULARY = [
   "NEW",
   "PROTOTYPE",
   "USED",
-  // Return-to-service terms. INSPECTED is documented (8130-3 Q&A, Q32);
-  // the rest are ordinary maintenance language, not enumerated anywhere.
+  // Return-to-service terms. INSPECTED and TESTED are documented (8130-3 Q&A,
+  // Q32); the rest are ordinary maintenance language, not enumerated anywhere.
   "INSPECTED",
+  "TESTED",
   "OVERHAULED",
   "MODIFIED",
   "REPAIRED",
@@ -141,6 +142,10 @@ export type MembershipProof = {
   issuerAgent: string;
   issuerMembershipHash?: string;
   predecessorMembershipHash?: string;
+  /** The KeyHandoff, authored by the key being replaced. */
+  rotationHandoffHash?: string;
+  /** The KeyAcceptance, authored by the key replacing it. */
+  rotationAcceptanceHash?: string;
   depth: number;
 };
 

@@ -109,6 +109,18 @@ one. These are the fields that correspond, with their block numbers on the form.
 Approval*; blocks 14a–14e are *Approval for Return to Service*. The maintenance case this project
 models — a repair station releasing a part it has worked on — is the **block 14 path**.
 
+> **The split is enforced in the UI only.** Be clear about this, because an aviation reviewer will
+> check it. The two demo pages offer different Block 11 vocabularies and different signer lists, but
+> they write the **same `Attestation` entry through the same validation**. The record carries no
+> field naming which path it belongs to, and the zome applies no path-specific vocabulary, signer or
+> predecessor rule. Concretely: a repair station can assert `NEW`, a production-approval holder can
+> assert `OVERHAULED`, the block-13 "no predecessor" rule holds only because the form omits the
+> field, and a verifier cannot tell the two paths apart because the record does not say.
+>
+> Making it real needs three things: a path discriminator on the binding, a vocabulary partitioned
+> by path, and a signer requirement tied to production versus maintenance accreditation. That is
+> outstanding work, and it depends on the same practitioner review as the vocabulary below.
+
 That distinction matters for the vocabulary. FAA Order 8130.21J §4-1(k) governs the block 13 path
 and defines Block 11 as exactly three terms: **NEW**, **PROTOTYPE**, **USED**. The block 14 path is
 governed by **AC 43-9, Maintenance Records** instead, where INSPECTED and TESTED are the documented
@@ -254,11 +266,34 @@ after revocation    membership=Active  revocation=RevokedAfterAssertion
 
 ## 8. Known limits
 
-- **One conductor, two agents.** Nothing exercises gossip between separate nodes, network
-  partitions, or DHT convergence.
+- **Two conductors on one machine.** `network-gossip.mjs` exercises gossip, cross-node authoring and
+  revocation propagation between independent conductors, in CI, on every push. Network partitions,
+  adversarial peers and separate physical hosts are still untested.
 - **Key rotation is implemented but untested end to end.**
 - **Revocation propagation is eventual.** A reader who has not yet received a revocation reports
-  `Clean`. This is inherent to the model, not a defect, but a relying party should know it.
+  `Unknown` if the link arrived without the record, and `Clean` if neither arrived. The second case
+  is inherent to the model, not a defect, but a relying party should know it.
+- **`historically_valid` can be false because data has not arrived yet.** A missing membership or
+  predecessor sets it false, and those are ordinary propagation states, not historical facts. So a
+  stranger fetching an attestation before its membership gossips is told the document *was not
+  properly authorised when signed* — a claim about the past, not about their sync state. This is
+  deliberate fail-closed design, but the field's name overstates what it knows. Read
+  `membership`/`predecessor` alongside it.
+- **`historically_valid` is judged against today's vocabulary.** An assertion no longer in
+  `assertion_vocabulary` makes the record invalid retroactively. Since the vocabulary is
+  provisional, the first revision will invalidate records that were correct when written — the exact
+  collapse of history into present that §10.1 of the spec calls the most important thing the format
+  gets right. Vocabulary changes therefore need a migration story before the vocabulary is settled.
+- **Neither implementation checks a signature.** In the zome this is a correct delegation —
+  Holochain sys-validates the author's signature before the record ever reaches validation, and
+  `signature_checked_by_sys` is a constant asserting that, not a check. In the browser engine there
+  are no signatures at all. What *is* checked in both is `author_matches_attester`.
+- **Attestation timestamps are author-controlled.** Expiry is enforced against the action timestamp,
+  which the signer writes. An agent whose chain has been idle since their approval lapsed can
+  back-date within that whole interval, and a modified client is all it takes. There is no fully
+  deterministic fix inside HDI: closing it needs a qualified external timestamp
+  (`Attestation.anchor`, which exists in the type and is not yet validated anywhere). Do not claim
+  back-dating is prevented.
 - **The bootstrap is unsolved** in the sense that matters: the code proves roots can be configured
   per deployment; it cannot tell you whose keys belong there.
 - **Admissibility is unanswered.** Whether a peer-validated record plus a qualified timestamp

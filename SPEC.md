@@ -342,18 +342,35 @@ Stated here so it is not discovered later by a sceptic.
 
 ## 13. Status of each part
 
-**Implemented and tested end to end** — see `docs/TECHNICAL-REFERENCE.md`:
+Three categories, and the difference between the second and the first is whether an automated test
+actually runs it. Being loose about that is how a spec ends up claiming coverage it does not have.
 
-§2 attestation structure · §3 scope, including `not_observed` vocabulary checks · §5 N=2 and
-counter-attestation · §6 membership as a time-bounded capability, with delegation, depth limits and
-expiry inheritance · §7 revocation on objective evidence · §9 the validation/verification split ·
-§10 verification including the two answers.
+**Implemented and exercised end to end against a real conductor**, single-node and across two
+conductors, in CI on every push — see `docs/TECHNICAL-REFERENCE.md`:
 
-**Implemented, not exercised end to end:** key rotation, as a two-step handoff and acceptance.
+§2 attestation structure · §3 scope, including `not_observed` · §6 root accreditation and refusal of
+a non-root issuer · §7 revocation on `ConflictingAssertions` and `Administrative` grounds · §9 the
+validation/verification split · §10 verification and the two answers.
+
+**Implemented and enforced, but not covered by an automated test:** counter-attestation ·
+delegation past depth 1 · the delegation matrix · depth limits · membership expiry · expiry
+inheritance · predecessor chains · key rotation in its entirety, including the handoff and
+acceptance a rotation now requires · the `DuplicateDocument`, `DuplicateCertIssuance` and
+`KeyRotated` revocation grounds · immutability · `genesis_self_check` refusing an empty root set ·
+the link validation rules · vocabulary rejection.
+
+That second list is the honest test gap. The rules exist and are enforced by the zome; nothing
+demonstrates them running, so a regression in any of them would be silent.
 
 **Specified, not implemented:**
 
-- **§8 anchoring.** Nothing yet emits or checks a qualified timestamp.
+- **§8 anchoring.** Nothing yet emits or checks a qualified timestamp. This is also why §10 step 5
+  (check the qualified timestamp) does not run, and why attestation back-dating is not prevented.
+- **§10 step 3 — checking the document digest against a presented document.** `verify_attestation`
+  takes only an `ActionHash`; there is no parameter through which a document could be supplied. The
+  digest is checked for shape, not against anything.
+- **The blocks 13 / 14 split as a property of the format.** It is currently enforced in the demo UI
+  only; the record carries no path discriminator. See `docs/TECHNICAL-REFERENCE.md` §4.1.1.
 - **§4.1 SD-JWT VC encoding.** The reference implementation uses its platform's native encoding;
   the SD-JWT VC representation is unwritten.
 

@@ -133,7 +133,18 @@ pub struct MembershipProof {
     pub issuer_membership_hash: Option<ActionHash>,
     /// Set when this proof replaces a rotated key's membership. Lets
     /// `DuplicateCertIssuance` distinguish rotation from double-granting.
+    ///
+    /// Because that ground *exempts* anything claiming to be a rotation, this
+    /// field is exactly what a corrupt issuer would set to grant one certificate
+    /// to two agents and immunise the double-grant. So a rotation must prove the
+    /// old key consented: the two fields below are required whenever this is
+    /// `Some`, and validation checks the handoff was authored by the key being
+    /// replaced and the acceptance by the key replacing it.
     pub predecessor_membership_hash: Option<ActionHash>,
+    /// The `KeyHandoff`, authored by the key being replaced.
+    pub rotation_handoff_hash: Option<ActionHash>,
+    /// The `KeyAcceptance`, authored by the key replacing it.
+    pub rotation_acceptance_hash: Option<ActionHash>,
     pub depth: u8,
 }
 

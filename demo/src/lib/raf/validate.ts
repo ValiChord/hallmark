@@ -99,6 +99,40 @@ function validateMembership(
     if (pred.value.agentPubkey === proof.agentPubkey) {
       return bad("key rotation predecessor is the same agent");
     }
+
+    // The old key must have consented and the new key accepted. Without this a
+    // rotation is just the issuer's say-so, and the DuplicateCertIssuance
+    // carve-out makes that say-so unchallengeable.
+    if (!proof.rotationHandoffHash || !proof.rotationAcceptanceHash) {
+      return bad("a key rotation requires both a handoff and an acceptance");
+    }
+    const handoff = requireEntry<KeyHandoff>(
+      lookup.get(proof.rotationHandoffHash),
+      "KeyHandoff",
+    );
+    if (!handoff.ok) return handoff;
+    const acceptance = requireEntry<KeyAcceptance>(
+      lookup.get(proof.rotationAcceptanceHash),
+      "KeyAcceptance",
+    );
+    if (!acceptance.ok) return acceptance;
+    const handoffRec = lookup.get(proof.rotationHandoffHash);
+    const acceptanceRec = lookup.get(proof.rotationAcceptanceHash);
+    if (handoff.value.oldMembershipHash !== proof.predecessorMembershipHash) {
+      return bad("handoff does not point at the predecessor membership");
+    }
+    if (acceptance.value.handoffHash !== proof.rotationHandoffHash) {
+      return bad("acceptance does not point at this handoff");
+    }
+    if (handoffRec?.author !== pred.value.agentPubkey) {
+      return bad("handoff was not authored by the key being replaced");
+    }
+    if (handoff.value.newKey !== proof.agentPubkey) {
+      return bad("handoff names a different new key");
+    }
+    if (acceptanceRec?.author !== proof.agentPubkey) {
+      return bad("acceptance was not authored by the new key");
+    }
   }
 
   if (!proof.issuerMembershipHash) {

@@ -171,4 +171,6 @@ for having them.
 - Get the demo running on a phone.
 - Build the assertion vocabulary with airworthiness practitioners; the current list is illustrative.
 - Exercise key rotation end to end.
-- Two conductors on separate machines, to test gossip and partition behaviour.
+- Two conductors on **separate machines**. Two on one machine already run in CI
+  (`zomes/tests/network-gossip.mjs`); what is untested is a real network between hosts, partition
+  behaviour, and adversarial peers.

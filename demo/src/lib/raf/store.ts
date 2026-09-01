@@ -44,8 +44,8 @@ export const useRaf = create<RafStore>()(
       // Bump this whenever DnaProperties change. The persisted state carries a
       // snapshot of the DNA, so a stale copy rejects records the current build
       // considers valid — adding the real Block 11 terms broke every already-open
-      // tab until this moved to v2. v3: CounterAttestation gained attestationHash.
-      name: "raf-workbench-v3",
+      // tab until this moved to v2. v3: CounterAttestation gained attestationHash. v4: TESTED added.
+      name: "raf-workbench-v4",
 
       // The activity log is append-only and unbounded, and it is the one part of
       // the state that never needs to survive a reload. Keeping it out of

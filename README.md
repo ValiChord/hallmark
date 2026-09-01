@@ -188,8 +188,13 @@ need a competition lawyer.
 - A Holochain zome that compiles, packs, installs into a conductor, and passes an end-to-end test:
   accreditation, refusal of a non-root, attestation, third-party verification, and revocation that
   withdraws current trust while preserving historical validity.
-- A conformance test holding the TypeScript engine and the Rust zome to the same verdicts.
-- CI running all of it, including the conductor test against real Holochain binaries.
+- **Two independent conductors on one DHT**, in CI: an accreditation gossiping from one node to the
+  other, a record authored on the second and verified on the first without the two signers ever
+  contacting each other, and a revocation on one node flipping the other's verdict to
+  `currently_trusted: false` while `historically_valid` stays true.
+- A conformance test holding the TypeScript engine to verdicts transcribed from the zome, with the
+  zome side asserted against a real conductor in CI.
+- CI running all of it against real Holochain binaries on every push.
 
 ### Settled
 

@@ -45,16 +45,20 @@ not a system of record.
 
 ## Binding
 
-- `binds`: part serial number
+- `binds`: serial, part number, or both (`binds_field`; the demo defaults to serial and part)
 - `to_document`: the authorised release certificate (FAA Form 8130-3 / EASA Form 1) and the
   back-to-birth chain behind it
 - The hard part is not one certificate. It is that the **chain** must remain checkable across
   custody changes, decades, and companies that no longer exist.
 
-## Assertion vocabulary — not started
+## Assertion vocabulary — provisional, not settled
 
-Must be built with repair-station and airworthiness practitioners. Desk research is not enough here,
-and the sketch would be worthless.
+A nine-term list exists and is enforced by the DNA, so the machinery works end to end. Three of the
+terms are the real Block 11 values from FAA Order 8130.21J; INSPECTED and TESTED are documented in
+the 8130-3 Q&A; the rest are ordinary maintenance language and LIFE_LIMITED_SCRAP is ours entirely.
+
+It must still be built with repair-station and airworthiness practitioners. Desk research is not
+enough, and the list as it stands is illustrative — see docs/TECHNICAL-REFERENCE.md 4.1.1.
 
 ## The twenty-year problem
 
