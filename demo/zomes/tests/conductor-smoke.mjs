@@ -247,10 +247,23 @@ async function main() {
   try {
     const report = await callRoot("verify_attestation", attHash);
     log(describe(report));
-    if (report.historically_valid && report.currently_trusted) {
+    // Assert every field the TypeScript conformance test pins. It compares
+    // against verdicts transcribed from a run of this script, so anything it
+    // pins that this does not assert is not actually cross-checked — a change
+    // in the zome would simply go unnoticed.
+    const checks = [
+      [report.historically_valid === true, "historically_valid=true"],
+      [report.currently_trusted === true, "currently_trusted=true"],
+      [variant(report.membership) === "Active", "membership=Active"],
+      [variant(report.revocation) === "Clean", "revocation=Clean"],
+      [report.author_matches_attester === true, "author_matches_attester=true"],
+      [report.binding_well_formed === true, "binding_well_formed=true"],
+    ];
+    const failed = checks.filter(([passed]) => !passed).map(([, name]) => name);
+    if (failed.length === 0) {
       ok("a third party verified the attestation");
     } else {
-      fail("verification did not report the attestation as trusted");
+      fail(`verification report differs from the pinned verdict: ${failed.join(", ")}`);
     }
   } catch (e) {
     fail("verify_attestation", e);
@@ -320,12 +333,18 @@ async function main() {
     const after = await callRoot("verify_attestation", attHash);
     log(describe(after));
     const rev = variant(after.revocation);
-    if (after.historically_valid && !after.currently_trusted && rev === "RevokedAfterAssertion") {
+    const mem = variant(after.membership);
+    if (
+      after.historically_valid &&
+      !after.currently_trusted &&
+      rev === "RevokedAfterAssertion" &&
+      mem === "Active"
+    ) {
       ok("after revocation: still historically valid, no longer currently trusted");
     } else {
       fail(
-        `expected historically_valid=true, currently_trusted=false, revocation=RevokedAfterAssertion; ` +
-          `got ${after.historically_valid}/${after.currently_trusted}/${rev}`,
+        `expected historically_valid=true, currently_trusted=false, revocation=RevokedAfterAssertion, membership=Active; ` +
+          `got ${after.historically_valid}/${after.currently_trusted}/${rev}/${mem}`,
       );
     }
   } catch (e) {

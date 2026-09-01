@@ -66,8 +66,10 @@ export function emptyState(): EngineState {
  * in-memory twin faithful to that ordering.
  */
 function nextTimestamp(state: EngineState): number {
-  let last = 0;
-  for (const r of state.records) if (r.timestamp > last) last = r.timestamp;
+  // records is append-only and these stamps are strictly increasing, so the
+  // maximum is always the last element. Scanning the whole array here is what
+  // made record creation quadratic.
+  const last = state.records.length > 0 ? state.records[state.records.length - 1]!.timestamp : 0;
   return Math.max(Date.now(), last + 1);
 }
 

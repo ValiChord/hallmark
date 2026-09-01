@@ -1059,11 +1059,15 @@ function ReportCard({ report }: { report: VerificationReport }) {
         <Row
           label="Revocation"
           hint="Has the accreditation behind this been withdrawn?"
-          ok={report.revocation.kind === "Clean"}
+          ok={report.revocation.kind === "Clean" || report.revocation.kind === "Rotated"}
           detail={
             report.revocation.kind === "Clean"
               ? "clean"
-              : `${report.revocation.kind} · ${groundsLabel(report.revocation.grounds)}`
+              : report.revocation.kind === "Rotated"
+                ? "key rotated — superseded, not withdrawn"
+                : report.revocation.kind === "Unknown"
+                  ? "could not be established — treated as untrusted"
+                  : `${report.revocation.kind} · ${groundsLabel(report.revocation.grounds)}`
           }
         />
       </dl>

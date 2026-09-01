@@ -7,10 +7,18 @@
  * scenario (`zomes/tests/conductor-smoke.mjs`) and asserts the TypeScript
  * engine produces the same ones.
  *
- * The zome side of the same contract is asserted inside the smoke test itself,
- * so if either implementation changes behaviour, one of the two fails.
+ * Be clear about what this is and is not. The verdicts below are **transcribed
+ * by hand** from a zome run — this test never invokes the zome, and the two
+ * implementations are never executed against each other in one process. It is a
+ * regression guard on the TypeScript side.
  *
- * Verdicts below were produced by holochain 0.7.0 on 2026-09-01.
+ * What makes the pin bite on the Rust side is that `conductor-smoke.mjs`
+ * asserts every field named here, in CI, against a real conductor. Add a field
+ * to `ZOME_VERDICTS` and you must add it there too, or that field is pinned in
+ * name only.
+ *
+ * Verdicts below were produced by holochain 0.7.0 on 2026-09-01 and last
+ * confirmed against the smoke test on 2026-09-01.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
