@@ -159,6 +159,7 @@ pub fn create_counter_attestation(input: CreateCounterInput) -> ExternResult<Rec
         .ok_or_else(|| guest("target is not an attestation"))?;
 
     let counter = CounterAttestation {
+        attestation_hash: input.attestation_hash.clone(),
         attester: Attester {
             agent_pubkey: me,
             role: input.role,

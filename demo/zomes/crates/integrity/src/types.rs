@@ -212,6 +212,11 @@ pub struct KeyAcceptance {
 #[hdk_entry_helper]
 #[derive(Clone, PartialEq)]
 pub struct CounterAttestation {
+    /// The attestation this counters. Without it the entry names no target and
+    /// the binding lives only in the link, so one counter could be linked onto
+    /// unlimited attestations - a broker filing a single Disagree against every
+    /// attestation a competitor ever published.
+    pub attestation_hash: ActionHash,
     pub attester: Attester,
     pub agreement: AgreementStatus,
     pub discrepancy_notes: Option<String>,

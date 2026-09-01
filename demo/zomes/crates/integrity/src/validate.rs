@@ -30,6 +30,39 @@ fn invalid(reason: impl Into<String>) -> ExternResult<ValidateCallbackResult> {
     Ok(ValidateCallbackResult::Invalid(reason.into()))
 }
 
+// Field bounds. This format is a wire contract, and every field below was
+// previously unbounded up to Holochain's entry-size limit — a megabyte-long
+// organisation name was well-formed. These are deliberately generous: they exist
+// to stop absurd input, not to encode business rules about name lengths.
+const MAX_NAME: usize = 200;
+const MAX_CERT: usize = 100;
+const MAX_TEXT: usize = 2_000;
+const MAX_LOCATOR: usize = 1_000;
+const MAX_DIGEST: usize = 512;
+const MAX_ASSERTIONS: usize = 64;
+const MAX_EVIDENCE: usize = 32;
+const MAX_EVIDENCE_HASHES: usize = 8;
+
+/// `None` when within bounds, `Some(Invalid)` when over.
+fn too_long(field: &str, value: &str, max: usize) -> Option<ExternResult<ValidateCallbackResult>> {
+    if value.len() > max {
+        Some(invalid(format!(
+            "{field} exceeds {max} bytes ({} given)",
+            value.len()
+        )))
+    } else {
+        None
+    }
+}
+
+fn too_many(field: &str, len: usize, max: usize) -> Option<ExternResult<ValidateCallbackResult>> {
+    if len > max {
+        Some(invalid(format!("{field} exceeds {max} entries ({len} given)")))
+    } else {
+        None
+    }
+}
+
 fn valid() -> ExternResult<ValidateCallbackResult> {
     Ok(ValidateCallbackResult::Valid)
 }
@@ -83,6 +116,14 @@ fn validate_membership(
     if ttl > props.max_membership_ttl_micros {
         return invalid("membership TTL exceeds DNA max_membership_ttl_micros");
     }
+    if let Some(inv) = too_long("organisation", &proof.organisation, MAX_NAME) { return inv; }
+    if let Some(inv) = too_long("organisation_id", &proof.organisation_id, MAX_NAME) { return inv; }
+    if let Some(inv) = too_long("cert_number", &proof.accreditation.cert_number, MAX_CERT) { return inv; }
+    if let Some(inv) = too_long(
+        "issuing_authority",
+        &proof.accreditation.issuing_authority,
+        MAX_CERT,
+    ) { return inv; }
     if !role_matches_accreditation(&proof.accreditation.accreditation_type, &proof.role) {
         return invalid("role does not match accreditation type");
     }
@@ -201,9 +242,25 @@ fn validate_attestation(
         BINDS_SERIAL | BINDS_PART | BINDS_BOTH => {}
         other => return invalid(format!("unknown binds_field '{other}'")),
     }
+    if let Some(inv) = too_long("part_number", &attestation.subject.part_number, MAX_CERT) { return inv; }
+    if let Some(inv) = too_long("serial_number", &attestation.subject.serial_number, MAX_CERT) { return inv; }
+    if let Some(inv) = too_long("description", &attestation.subject.description, MAX_TEXT) { return inv; }
+    if let Some(inv) = too_long("document_id", &attestation.binding.document_id, MAX_NAME) { return inv; }
+    if let Some(inv) = too_long("document_digest", &attestation.binding.document_digest, MAX_DIGEST) { return inv; }
+    if let Some(inv) = too_long("organisation", &attestation.attester.organisation, MAX_NAME) { return inv; }
+    if let Some(inv) = too_long("organisation_id", &attestation.attester.organisation_id, MAX_NAME) { return inv; }
+    if let Some(inv) = too_many("evidence", attestation.evidence.len(), MAX_EVIDENCE) { return inv; }
+    if let Some(inv) = too_many("observed", attestation.scope.observed.len(), MAX_ASSERTIONS) { return inv; }
+    if let Some(inv) = too_many("not_observed", attestation.scope.not_observed.len(), MAX_ASSERTIONS) { return inv; }
+
     for ev in &attestation.evidence {
         if ev.evidence_type.trim().is_empty() || ev.digest.trim().len() < 16 {
             return invalid("evidence type and digest are required");
+        }
+        if let Some(inv) = too_long("evidence_type", &ev.evidence_type, MAX_CERT) { return inv; }
+        if let Some(inv) = too_long("evidence digest", &ev.digest, MAX_DIGEST) { return inv; }
+        if let Some(locator) = &ev.locator {
+            if let Some(inv) = too_long("evidence locator", locator, MAX_LOCATOR) { return inv; }
         }
     }
 
@@ -346,6 +403,14 @@ fn validate_revocation(
     // one property this format exists to protect. The other entry types already
     // impose ordering (see `validate_membership` and `validate_attestation`);
     // this one did not.
+    if let Some(inv) = too_many(
+        "evidence_hashes",
+        revocation.evidence_hashes.len(),
+        MAX_EVIDENCE_HASHES,
+    ) { return inv; }
+    if let Some(notes) = &revocation.notes {
+        if let Some(inv) = too_long("notes", notes, MAX_TEXT) { return inv; }
+    }
     let revoked_at = action.timestamp();
     let membership_issued = membership_record.action().timestamp();
     if revoked_at < membership_issued {
@@ -657,6 +722,15 @@ fn validate_counter(
     if counter.attester.organisation.trim().is_empty() {
         return invalid("organisation is required");
     }
+    if let Some(inv) = too_long("organisation", &counter.attester.organisation, MAX_NAME) { return inv; }
+    if let Some(inv) = too_long("organisation_id", &counter.attester.organisation_id, MAX_NAME) { return inv; }
+    if let Some(notes) = &counter.discrepancy_notes {
+        if let Some(inv) = too_long("discrepancy_notes", notes, MAX_TEXT) { return inv; }
+    }
+    let target = must_get_valid_record(counter.attestation_hash.clone())?;
+    if let Err(inv) = require_app_entry::<Attestation>(&target)? {
+        return Ok(inv);
+    }
     valid()
 }
 
@@ -759,6 +833,9 @@ pub fn validate_link(link: OpLink<LinkTypes>) -> ExternResult<ValidateCallbackRe
                     let Some(att_hash) = action.data.base_address.clone().into_action_hash() else {
                         return invalid("counter link base must be an attestation action hash");
                     };
+                    if att_hash != counter.attestation_hash {
+                        return invalid("counter link base is not the attestation the counter names");
+                    }
                     let att_record = must_get_valid_record(att_hash)?;
                     match require_app_entry::<Attestation>(&att_record)? {
                         Ok(_) => {}

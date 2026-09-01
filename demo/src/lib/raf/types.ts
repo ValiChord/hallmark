@@ -169,6 +169,8 @@ export type KeyAcceptance = {
 };
 
 export type CounterAttestation = {
+  /** The attestation this counters. Named in the entry, not just the link. */
+  attestationHash: string;
   attester: Attester;
   agreement: AgreementStatus;
   discrepancyNotes?: string;

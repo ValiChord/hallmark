@@ -291,7 +291,7 @@ export function createCounter(
   state: EngineState,
   author: string,
   attestationHash: string,
-  counter: Omit<CounterAttestation, "attester"> & {
+  counter: Omit<CounterAttestation, "attester" | "attestationHash"> & {
     role: AttesterRole;
     organisation: string;
     organisationId: string;
@@ -302,6 +302,7 @@ export function createCounter(
     return { ok: false, reason: "target is not an attestation" };
   }
   const value: CounterAttestation = {
+    attestationHash,
     attester: {
       agentPubkey: author,
       role: counter.role,
