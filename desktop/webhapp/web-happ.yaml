@@ -1,0 +1,6 @@
+manifest_version: "0"
+name: hallmark
+ui:
+  path: "./ui.zip"
+happ:
+  path: "./aviation_provenance.happ"

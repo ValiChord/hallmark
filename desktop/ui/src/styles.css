@@ -1,0 +1,259 @@
+:root {
+  --bg: #0c0e11;
+  --surface: #14171c;
+  --border: rgba(232, 230, 225, 0.1);
+  --fg: #e8e6e1;
+  --muted: #8f948f;
+  --primary: #9ecfa0;
+  --ok: #6fbf73;
+  --danger: #e07a6b;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+code,
+.mono {
+  font-family: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+header.top {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.kicker {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 0;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 4px 0 6px;
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+p.lede {
+  color: var(--muted);
+  margin: 0;
+  max-width: 62ch;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--border);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.kv {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.kv .k {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kv .v {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+nav.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+nav.tabs button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+nav.tabs button[aria-selected="true"] {
+  color: var(--fg);
+  background: var(--surface);
+  border-color: rgba(158, 207, 160, 0.4);
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+label span {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+input,
+select,
+textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font: inherit;
+  width: 100%;
+}
+
+button.action {
+  background: var(--primary);
+  color: #0c0e11;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.banner {
+  border-radius: 8px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.banner.ok {
+  background: rgba(111, 191, 115, 0.12);
+  color: var(--ok);
+}
+
+.banner.err {
+  background: rgba(224, 122, 107, 0.12);
+  color: var(--danger);
+}
+
+.verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.verdict .name {
+  min-width: 190px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.verdict .val {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.yes {
+  color: var(--ok);
+}
+
+.no {
+  color: var(--danger);
+}
+
+ul.records {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul.records li {
+  border-bottom: 1px solid var(--border);
+  padding: 9px 0;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}

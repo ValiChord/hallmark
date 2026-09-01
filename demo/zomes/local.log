@@ -1,0 +1,8 @@
+[1;34mhc-conductor-config:[0m Admin port set to: 9500
+Initialising log output formatting with option Log
+# lair-keystore connection_url # named-pipe:\\.\pipe\upDz8PQSqAa9lRUmnTQiS?k=Wx8q0FOuzTj5AO9Se8zXwimuYZQldcfDPw4IgaNrP0s #
+# lair-keystore running #
+
+Conductor ready.
+[1;34mhc-sandbox:[0m Connected successfully to a running holochain
+[1;34mhc-sandbox:[0m Conductor launched #!0 {"admin_port":9500,"app_ports":[]}

@@ -16,3 +16,18 @@ Thumbs.db
 .hc_live_*
 .vercel/
 .output/
+
+# Desktop app build artefacts
+desktop/node_modules/
+desktop/ui/node_modules/
+desktop/ui/dist/
+desktop/out/
+desktop/dist/
+desktop/resources/
+desktop/webhapp/ui.zip
+desktop/webhapp/*.happ
+desktop/webhapp/*.webhapp
+desktop/pouch/*.webhapp
+desktop/dev.log
+desktop/build/icon.*
+desktop/ui/public/icon.png
