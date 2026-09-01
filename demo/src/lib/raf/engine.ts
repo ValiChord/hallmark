@@ -210,12 +210,6 @@ export function createAttestation(
       type: "DocumentToAttestation",
       author,
     },
-    {
-      base: agentBase(author),
-      target: hash,
-      type: "AgentToAttestation",
-      author,
-    },
   );
   state.log.unshift({
     id: state.seq,

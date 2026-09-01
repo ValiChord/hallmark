@@ -49,10 +49,15 @@ pub enum EntryTypes {
 }
 
 #[hdk_link_types]
+// There was an `AgentToAttestation` link here, written on every attestation and
+// based at a single `agent:{key}` anchor that grew for the agent's whole life —
+// a DHT hotspot by construction. Nothing ever read it: there was no
+// agent-to-attestation getter, so every node validated and gossiped it forever
+// for no query. Removed 2026-09-01. If agent-scoped lookup is ever wanted, shard
+// the anchor (`agent:{key}/{yyyy-mm}`) rather than reinstating one unbounded base.
 pub enum LinkTypes {
     SerialToAttestation,
     DocumentToAttestation,
-    AgentToAttestation,
     AgentMembership,
     AgentRevocation,
     MembershipToRevocation,

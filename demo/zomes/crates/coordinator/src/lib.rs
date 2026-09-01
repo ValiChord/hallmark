@@ -135,12 +135,6 @@ pub fn create_attestation(attestation: Attestation) -> ExternResult<Record> {
         LinkTypes::DocumentToAttestation,
         (),
     )?;
-    create_link(
-        agent_path_hash(&attestation.attester.agent_pubkey)?,
-        hash.clone(),
-        LinkTypes::AgentToAttestation,
-        (),
-    )?;
     get_record(hash)
 }
 

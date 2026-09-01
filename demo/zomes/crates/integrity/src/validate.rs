@@ -340,6 +340,18 @@ fn validate_revocation(
         return invalid("revocation agent does not match membership agent");
     }
 
+    // A revocation cannot predate what it revokes. Without this, an author with
+    // a quiescent chain can stamp a revocation before an existing attestation
+    // and flip that attestation's `historically_valid` to false — destroying the
+    // one property this format exists to protect. The other entry types already
+    // impose ordering (see `validate_membership` and `validate_attestation`);
+    // this one did not.
+    let revoked_at = action.timestamp();
+    let membership_issued = membership_record.action().timestamp();
+    if revoked_at < membership_issued {
+        return invalid("revocation predates the membership it revokes");
+    }
+
     match &revocation.grounds {
         RevocationGrounds::Administrative => {
             let issuer_ok = author == &membership.issuer_agent;
@@ -393,10 +405,28 @@ fn validate_revocation(
             {
                 return invalid("attestations were not authored by the revoked agent");
             }
+            if a1.membership_proof_hash != revocation.membership_hash
+                || a2.membership_proof_hash != revocation.membership_hash
+            {
+                return invalid("evidence was not signed under the membership being revoked");
+            }
             if a1.binding.document_type != a2.binding.document_type
                 || a1.binding.document_id != a2.binding.document_id
             {
                 return invalid("documents are not the same type+id");
+            }
+            // A corrected form issued under the same document_id, correctly
+            // linked to the one it replaces, is a supersede — not a duplicate.
+            // `ConflictingAssertions` has always excused this; omitting it here
+            // let an organisation's own correction be used to revoke it.
+            if is_supersede_chain(
+                &a1,
+                &revocation.evidence_hashes[0],
+                &a2,
+                &revocation.evidence_hashes[1],
+                props.max_delegation_depth,
+            )? {
+                return invalid("documents are a supersede chain, not a duplicate");
             }
             if revocation.evidence_hashes[0] == revocation.evidence_hashes[1] {
                 return invalid("duplicate evidence hash");
@@ -419,15 +449,26 @@ fn validate_revocation(
             {
                 return invalid("attestations were not authored by the revoked agent");
             }
+            if a1.membership_proof_hash != revocation.membership_hash
+                || a2.membership_proof_hash != revocation.membership_hash
+            {
+                return invalid("evidence was not signed under the membership being revoked");
+            }
             if a1.subject.serial_number != a2.subject.serial_number
                 || a1.subject.part_number != a2.subject.part_number
             {
                 return invalid("attestations refer to different parts");
             }
-            // A predecessor chain is a supersede, not a conflict.
-            if predecessor_of(&a1, &revocation.evidence_hashes[1])
-                || predecessor_of(&a2, &revocation.evidence_hashes[0])
-            {
+            // A predecessor chain is a supersede, not a conflict — following the
+            // whole chain, not just one hop, so A1 <- A2 <- A3 cannot be cited
+            // as a conflict between A1 and A3.
+            if is_supersede_chain(
+                &a1,
+                &revocation.evidence_hashes[0],
+                &a2,
+                &revocation.evidence_hashes[1],
+                props.max_delegation_depth,
+            )? {
                 return invalid("attestations are a predecessor chain, not a conflict");
             }
             let v1 = a1
@@ -467,8 +508,14 @@ fn validate_revocation(
             {
                 return invalid("revoked agent is not the issuer of both proofs");
             }
-            if p1.issuer_agent != p2.issuer_agent {
-                return invalid("different issuers");
+            // Both grants must have been made *under the membership being
+            // revoked*. Without this, grants issued under an earlier, long-since
+            // replaced membership can be cited against every membership the
+            // agent is ever issued afterwards.
+            if p1.issuer_membership_hash.as_ref() != Some(&revocation.membership_hash)
+                || p2.issuer_membership_hash.as_ref() != Some(&revocation.membership_hash)
+            {
+                return invalid("grants were not issued under the membership being revoked");
             }
             if p1.accreditation.cert_number != p2.accreditation.cert_number
                 || p1.accreditation.issuing_authority != p2.accreditation.issuing_authority
@@ -496,8 +543,44 @@ fn validate_revocation(
     valid()
 }
 
-fn predecessor_of(attestation: &Attestation, other_hash: &ActionHash) -> bool {
-    attestation.binding.predecessor_document_hash.as_ref() == Some(other_hash)
+/// Is one of these two attestations reachable from the other by following
+/// `predecessor_document_hash`? A single-hop check misses A1 <- A2 <- A3, which
+/// let a revision chain be cited as if it were a conflict or a duplicate.
+///
+/// Bounded by `max_hops` and guarded by a `seen` set, so a long or circular
+/// chain terminates rather than running away. Deterministic: every fetch is
+/// `must_get_valid_record`.
+fn is_supersede_chain(
+    a1: &Attestation,
+    h1: &ActionHash,
+    a2: &Attestation,
+    h2: &ActionHash,
+    max_hops: u8,
+) -> ExternResult<bool> {
+    Ok(walks_back_to(a1, h2, max_hops)? || walks_back_to(a2, h1, max_hops)?)
+}
+
+fn walks_back_to(from: &Attestation, target: &ActionHash, max_hops: u8) -> ExternResult<bool> {
+    let mut seen: HashSet<ActionHash> = HashSet::new();
+    let mut cursor = from.binding.predecessor_document_hash.clone();
+
+    for _ in 0..=max_hops {
+        let Some(hash) = cursor else { return Ok(false) };
+        if &hash == target {
+            return Ok(true);
+        }
+        if !seen.insert(hash.clone()) {
+            return Ok(false);
+        }
+        let record = must_get_valid_record(hash)?;
+        // A predecessor that is not an attestation ends the walk; the entry's
+        // own validation is what rejects it, not this helper.
+        let Ok(Ok(prev)) = require_app_entry::<Attestation>(&record) else {
+            return Ok(false);
+        };
+        cursor = prev.binding.predecessor_document_hash.clone();
+    }
+    Ok(false)
 }
 
 fn two_attestations(
@@ -592,19 +675,11 @@ pub fn validate_link(link: OpLink<LinkTypes>) -> ExternResult<ValidateCallbackRe
                 return invalid("link target must be an action hash");
             };
             let record = must_get_valid_record(target_hash)?;
-            if record.action().author() != &author
-                && !matches!(
-                    link_type,
-                    // Revocation and counters may be linked by their own author
-                    // onto a base they do not own (the membership / attestation).
-                    LinkTypes::MembershipToRevocation
-                        | LinkTypes::AttestationToCounter
-                        | LinkTypes::HandoffToAcceptance
-                )
-            {
-                // For index links the linker must be the entry author. Checked
-                // per-type below where it matters.
-            }
+            // Every arm below independently requires the linker to be the target
+            // entry's author, so there is no shared pre-check here. (There used
+            // to be an `if` with an empty body and a comment claiming three link
+            // types were exempt. They are not — each of those arms checks
+            // authorship too.)
             match link_type {
                 LinkTypes::SerialToAttestation => {
                     let att = match require_app_entry::<Attestation>(&record)? {
@@ -629,19 +704,6 @@ pub fn validate_link(link: OpLink<LinkTypes>) -> ExternResult<ValidateCallbackRe
                     }
                     if expected_document_base(&att)? != base {
                         return invalid("document path does not match attestation binding");
-                    }
-                    valid()
-                }
-                LinkTypes::AgentToAttestation => {
-                    let att = match require_app_entry::<Attestation>(&record)? {
-                        Ok(a) => a,
-                        Err(inv) => return Ok(inv),
-                    };
-                    if record.action().author() != &author {
-                        return invalid("agent-attestation link author must be the attester");
-                    }
-                    if expected_agent_base(&att.attester.agent_pubkey)? != base {
-                        return invalid("agent path does not match attester");
                     }
                     valid()
                 }

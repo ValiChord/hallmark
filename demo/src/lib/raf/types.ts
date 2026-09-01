@@ -185,7 +185,6 @@ export type Entry =
 export type LinkType =
   | "SerialToAttestation"
   | "DocumentToAttestation"
-  | "AgentToAttestation"
   | "AgentMembership"
   | "AgentRevocation"
   | "MembershipToRevocation"
