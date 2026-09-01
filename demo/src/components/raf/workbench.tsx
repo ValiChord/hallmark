@@ -503,7 +503,12 @@ function IssueForm({
   actor: string;
   onSubmit: (proof: Parameters<typeof issueMembership>[2]) => void;
 }) {
-  const subjects = state.agents.filter((a) => a.pubkey !== actor);
+  // A fresh array literal every render gave the effect below a new dependency
+  // identity every render, so it ran every time rather than when the list changed.
+  const subjects = useMemo(
+    () => state.agents.filter((a) => a.pubkey !== actor),
+    [state.agents, actor],
+  );
   const [subject, setSubject] = useState(subjects[0]?.pubkey ?? "");
   const [role, setRole] = useState<AttesterRole>("Oem");
   const [accred, setAccred] = useState<AccreditationType>("OemAuthorized");
@@ -911,17 +916,15 @@ function RevokeForm({
 function VerifyTab({ state, actor }: { state: EngineState; actor?: string }) {
   const atts = state.records.filter((r) => r.entry.type === "Attestation");
   const [hash, setHash] = useState(atts[atts.length - 1]?.hash ?? "");
-  const [report, setReport] = useState<VerificationReport | null>(null);
   const [agree, setAgree] = useState<AgreementStatus>("Agree");
   const agent = state.agents.find((a) => a.pubkey === actor);
 
-  useEffect(() => {
-    if (hash) {
-      const r = verifyAttestation(state, hash);
-      setReport("error" in r ? null : r);
-    } else {
-      setReport(null);
-    }
+  // Derived, not stored. Computing this in an effect and calling setState meant
+  // every DHT change rendered twice.
+  const report = useMemo<VerificationReport | null>(() => {
+    if (!hash) return null;
+    const r = verifyAttestation(state, hash);
+    return "error" in r ? null : r;
   }, [hash, state]);
 
   const mutate = useRaf((s) => s.mutate);

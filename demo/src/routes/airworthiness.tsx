@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,13 +41,19 @@ function AirworthinessPage() {
   const dht = useRaf((s) => s.dht);
   const mutate = useRaf((s) => s.mutate);
 
-  const eligible = dht.agents.filter((a) => {
-    const mem = latestMembership(dht, a.pubkey);
-    return (
-      mem?.entry.type === "MembershipProof" &&
-      PRODUCTION_ACCREDITATIONS.includes(mem.entry.value.accreditation.accreditationType)
-    );
-  });
+  // O(agents x records), and this component holds four text inputs — without
+  // the memo it re-ran on every keystroke.
+  const eligible = useMemo(
+    () =>
+      dht.agents.filter((a) => {
+        const mem = latestMembership(dht, a.pubkey);
+        return (
+          mem?.entry.type === "MembershipProof" &&
+          PRODUCTION_ACCREDITATIONS.includes(mem.entry.value.accreditation.accreditationType)
+        );
+      }),
+    [dht],
+  );
 
   const [actor, setActor] = useState<string>(eligible[0]?.pubkey ?? "");
   const [partType, setPartType] = useState<PartType>("Engine");

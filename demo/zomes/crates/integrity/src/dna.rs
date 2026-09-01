@@ -31,8 +31,11 @@ impl DnaProperties {
         self.initial_members.iter().cloned().map(Into::into).collect()
     }
 
+    /// Compares without materialising the whole root list. `root_keys()` clones
+    /// and converts every entry, and this runs several times per validation.
     pub fn is_root(&self, agent: &AgentPubKey) -> bool {
-        self.root_keys().iter().any(|k| k == agent)
+        let target = AgentPubKeyB64::from(agent.clone());
+        self.initial_members.iter().any(|k| k == &target)
     }
 
     pub fn check_installable(&self) -> ValidateCallbackResult {
