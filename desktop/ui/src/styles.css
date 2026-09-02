@@ -257,3 +257,10 @@ ul.records li {
 .small {
   font-size: 12px;
 }
+
+textarea {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  resize: vertical;
+  word-break: break-all;
+}

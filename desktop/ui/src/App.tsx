@@ -2,14 +2,25 @@ import { useCallback, useEffect, useState } from "react";
 import { decodeHashFromBase64 } from "@holochain/client";
 import { call, connect, recordEntry, recordHash, b64, type NodeInfo } from "./hc";
 
-type Tab = "node" | "accredit" | "attest" | "verify";
+type Tab = "node" | "network" | "accredit" | "attest" | "verify";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "node", label: "This node" },
+  { id: "network", label: "Network" },
   { id: "accredit", label: "Accredit" },
   { id: "attest", label: "Attest" },
   { id: "verify", label: "Verify" },
 ];
+
+/** Bridged from the main process — see src/preload/happ.ts. */
+type HallmarkBridge = {
+  getNetworkKey(): Promise<string>;
+  setNetworkKey(key: string): Promise<boolean>;
+  getPeerInfo(): Promise<string>;
+  addPeerInfo(encoded: string): Promise<number>;
+};
+const bridge = (): HallmarkBridge | undefined =>
+  (window as unknown as { __HALLMARK__?: HallmarkBridge }).__HALLMARK__;
 
 const RETURN_TO_SERVICE = ["OVERHAULED", "REPAIRED", "INSPECTED", "TESTED", "MODIFIED"];
 const YEAR_MICROS = 31_536_000_000_000;
@@ -83,6 +94,7 @@ export function App() {
       ) : null}
 
       {tab === "node" ? <NodePanel node={node} /> : null}
+      {tab === "network" ? <NetworkPanel setBanner={setBanner} /> : null}
       {tab === "accredit" ? <Accredit node={node} setBanner={setBanner} /> : null}
       {tab === "attest" ? <Attest node={node} setBanner={setBanner} /> : null}
       {tab === "verify" ? <Verify setBanner={setBanner} /> : null}
@@ -126,6 +138,165 @@ function NodePanel({ node }: { node: NodeInfo }) {
           read theirs out. If it matches, the software cannot be quietly applying different rules
           for them than for you.
         </p>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Joining a network, and finding each other, with nobody's server involved.
+ *
+ * Two things travel between devices and they are not the same:
+ *
+ *  - the **network key** says which network this is. It never expires, and
+ *    holding it grants no authority — you still have to be accredited.
+ *  - **peer info** says where a device is right now. It is signed with a
+ *    20-minute expiry, so it cannot go in a durable invite. Swap it live.
+ */
+function NetworkPanel({ setBanner }: { setBanner: (b: Banner) => void }) {
+  const api = bridge();
+  const [networkKey, setNetworkKey] = useState("");
+  const [joinKey, setJoinKey] = useState("");
+  const [myPeer, setMyPeer] = useState("");
+  const [theirPeer, setTheirPeer] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!api) return;
+    api.getNetworkKey().then(setNetworkKey).catch(() => undefined);
+  }, [api]);
+
+  if (!api) {
+    return (
+      <div className="card">
+        <h2>Not available</h2>
+        <p className="lede small">
+          This panel needs the desktop app's bridge to the conductor's admin interface.
+        </p>
+      </div>
+    );
+  }
+
+  const copy = async (text: string, what: string) => {
+    await navigator.clipboard.writeText(text);
+    setBanner({ ok: true, text: `${what} copied to the clipboard.` });
+  };
+
+  const refreshPeer = async () => {
+    setBusy(true);
+    try {
+      setMyPeer(await api.getPeerInfo());
+    } catch (e) {
+      setBanner({ ok: false, text: reason(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="card">
+        <h2>1. The network key</h2>
+        <p className="lede small" style={{ marginBottom: 12 }}>
+          This says <em>which network</em> — its root authorities, its seed, its vocabularies. It
+          does not expire, and it grants nothing on its own: whoever holds it still has to be
+          accredited before they can sign anything. Send it however you like.
+        </p>
+        <textarea readOnly rows={3} value={networkKey} onFocus={(e) => e.currentTarget.select()} />
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button className="ghost" onClick={() => void copy(networkKey, "Network key")}>
+            Copy my network key
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Join someone else's network</h2>
+        <p className="lede small" style={{ marginBottom: 12 }}>
+          Paste their key and restart. Your agent key is kept, so anything already issued to you
+          still applies — but you will be on <em>their</em> network, and records on your old one
+          will no longer be visible.
+        </p>
+        <textarea
+          rows={3}
+          value={joinKey}
+          onChange={(e) => setJoinKey(e.target.value)}
+          placeholder="Paste a network key here"
+        />
+        <button
+          className="action"
+          style={{ marginTop: 10 }}
+          disabled={busy || !joinKey.trim()}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await api.setNetworkKey(joinKey);
+              setBanner({
+                ok: true,
+                text: "Network key accepted. Close and reopen the app to join.",
+              });
+              setJoinKey("");
+            } catch (e) {
+              setBanner({ ok: false, text: reason(e) });
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Join this network
+        </button>
+      </div>
+
+      <div className="card">
+        <h2>2. Introduce your devices</h2>
+        <p className="lede small" style={{ marginBottom: 12 }}>
+          Same network is not the same as <em>having found each other</em>. Swap the text below
+          between devices — each end pastes the other's — and they connect directly, with no
+          bootstrap server and no third party. <strong>It expires after 20 minutes</strong>, so do
+          it while both devices are running, and press Refresh if it goes stale.
+        </p>
+        <textarea readOnly rows={4} value={myPeer} onFocus={(e) => e.currentTarget.select()} />
+        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          <button className="ghost" onClick={() => void refreshPeer()} disabled={busy}>
+            {myPeer ? "Refresh" : "Show my peer info"}
+          </button>
+          {myPeer ? (
+            <button className="ghost" onClick={() => void copy(myPeer, "Peer info")}>
+              Copy
+            </button>
+          ) : null}
+        </div>
+
+        <div style={{ marginTop: 18 }}>
+          <textarea
+            rows={4}
+            value={theirPeer}
+            onChange={(e) => setTheirPeer(e.target.value)}
+            placeholder="Paste the other device's peer info here"
+          />
+          <button
+            className="action"
+            style={{ marginTop: 10 }}
+            disabled={busy || !theirPeer.trim()}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const n = await api.addPeerInfo(theirPeer);
+                setBanner({
+                  ok: true,
+                  text: `Introduced to ${n} peer${n === 1 ? "" : "s"}. Records should start arriving.`,
+                });
+                setTheirPeer("");
+              } catch (e) {
+                setBanner({ ok: false, text: reason(e) });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Add this peer
+          </button>
+        </div>
       </div>
     </>
   );

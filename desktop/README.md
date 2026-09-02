@@ -257,6 +257,36 @@ $s.AuthenticateAsClient('dev-test-bootstrap2.holochain.org')
 If the issuer is a real CA, networking is fine. If it names your antivirus, it
 is not.
 
+## Bootstrap and relay are two dependencies, not one
+
+Easy to conflate, and getting it wrong sends you down the wrong fix. Measured on
+2026-09-02 by reading what a node actually advertises.
+
+- **The bootstrap server answers "who is out there?"** It hands out the addresses
+  of nodes currently online. You can do without it by introducing devices
+  directly — swapping peer info, which is what the Network tab does and what
+  `zomes/tests/network-gossip.mjs` does in CI.
+- **The relay answers "how do I reach them?"** And this one you cannot simply
+  skip, because a node's advertised address *is a path on the relay*:
+
+```json
+"url": "https://dev-test-bootstrap2.holochain.org:443/af480d92…"
+```
+
+So two devices introduced directly still route through the relay. Manual
+introduction removes the bootstrap dependency and **not** the relay dependency.
+
+The practical consequence: on a machine whose TLS is intercepted (see
+Troubleshooting above), manual introduction does not help. Both nodes accept the
+introduction, the accreditation is authored, and nothing gossips — because
+neither can open a connection through the relay.
+
+To have no external dependency at all, run **both** services yourself. Kitsune2's
+`bootstrap_srv` provides bootstrap and relay together
+([holochain/kitsune2](https://github.com/holochain/kitsune2), `crates/bootstrap_srv`),
+so one process on the LAN, addressed over plain HTTP, removes the interception
+problem and the third-party dependency in the same move. Not yet built here.
+
 ## Verifying two nodes locally
 
 `scripts/two-node-check.mjs` drives two running instances through their admin

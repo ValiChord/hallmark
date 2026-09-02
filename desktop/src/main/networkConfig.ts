@@ -47,6 +47,21 @@ export function networkConfigPath(kangarooFs: KangarooFileSystem): string {
   return path.join(kangarooFs.profileDataDir, 'network.json');
 }
 
+/**
+ * Replace the network configuration. The DNA hash is derived from these values,
+ * so the app reinstalls onto the new network on next launch — keeping the same
+ * agent key, so any accreditation already issued to this device still applies.
+ */
+export function writeNetworkConfig(
+  kangarooFs: KangarooFileSystem,
+  properties: NetworkProperties
+): void {
+  fs.writeFileSync(
+    networkConfigPath(kangarooFs),
+    JSON.stringify({ properties: { ...DEFAULTS, ...properties } }, null, 2)
+  );
+}
+
 export function readNetworkConfig(kangarooFs: KangarooFileSystem): NetworkConfig {
   const file = networkConfigPath(kangarooFs);
   if (!fs.existsSync(file)) {

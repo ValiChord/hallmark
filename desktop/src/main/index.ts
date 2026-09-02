@@ -29,6 +29,11 @@ import { breakingVersion, KangarooFileSystem } from './filesystem';
 import { KangarooEmitter } from './eventEmitter';
 import { setupLogs } from './logs';
 import { HolochainManager } from './holochainManager';
+import {
+  readNetworkConfig,
+  writeNetworkConfig,
+  type NetworkProperties,
+} from './networkConfig';
 import { createSplashWindow } from './windows';
 import { KANGAROO_CONFIG, NOTIFICATIONS_ICON_PATH, SYSTRAY_ICON_PATH } from './const';
 import { kangarooMenu } from './menu';
@@ -232,6 +237,67 @@ app.whenReady().then(async () => {
     productName: KANGAROO_CONFIG.productName,
     version: KANGAROO_CONFIG.version,
   }));
+
+  // ------------------------------------------------------------------------------------
+  // Joining a network without anybody's server.
+  //
+  // Two separate things travel between devices, and they behave differently:
+  //
+  //  - The **network key** says which network this is: the root authorities, the
+  //    seed, the vocabularies. It never expires. Paste it in and your DNA hash
+  //    matches theirs, which is what "same network" means.
+  //  - **Peer info** says where a device is on the wire *right now*. Kitsune2
+  //    signs it with a 20-minute expiry, so it cannot be put in a durable
+  //    invite — it is swapped live, or fetched from a bootstrap server.
+  //
+  // `agentInfo` and `addAgentInfo` are admin-level calls, and the renderer only
+  // holds an app-level token, so they are bridged here rather than exposed.
+  // ------------------------------------------------------------------------------------
+  ipcMain.handle('network-key-get', () => {
+    const { properties } = readNetworkConfig(KANGAROO_FILESYSTEM);
+    return Buffer.from(JSON.stringify(properties)).toString('base64');
+  });
+
+  ipcMain.handle('network-key-set', (_e, key: string) => {
+    let properties: unknown;
+    try {
+      properties = JSON.parse(Buffer.from(key.trim(), 'base64').toString('utf-8'));
+    } catch {
+      throw new Error('That does not look like a network key.');
+    }
+    if (!properties || typeof properties !== 'object') {
+      throw new Error('That does not look like a network key.');
+    }
+    const roots = (properties as { initial_members?: unknown }).initial_members;
+    if (!Array.isArray(roots) || roots.length === 0) {
+      throw new Error('That network key names no root authority.');
+    }
+    writeNetworkConfig(KANGAROO_FILESYSTEM, properties as NetworkProperties);
+    // The DNA hash is derived from these, so the app has to reinstall onto the
+    // new network. It does that on next launch, keeping this agent key.
+    return true;
+  });
+
+  ipcMain.handle('peer-info-get', async () => {
+    if (!HOLOCHAIN_MANAGER) throw new Error('The conductor is not running yet.');
+    const infos = await HOLOCHAIN_MANAGER.adminWebsocket.agentInfo({ dna_hashes: null });
+    return JSON.stringify(infos);
+  });
+
+  ipcMain.handle('peer-info-add', async (_e, encoded: string) => {
+    if (!HOLOCHAIN_MANAGER) throw new Error('The conductor is not running yet.');
+    let agent_infos: string[];
+    try {
+      agent_infos = JSON.parse(encoded.trim());
+    } catch {
+      throw new Error('That does not look like peer info.');
+    }
+    if (!Array.isArray(agent_infos) || agent_infos.length === 0) {
+      throw new Error('That peer info is empty.');
+    }
+    await HOLOCHAIN_MANAGER.adminWebsocket.addAgentInfo({ agent_infos });
+    return agent_infos.length;
+  });
   // Will be called by the splashscreen UI in the "password-optional"
   // or "user-provided" password modes
   ipcMain.handle('launch', async (_e, passwordInput: PasswordType): Promise<void> => {

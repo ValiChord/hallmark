@@ -100,6 +100,18 @@ async function main() {
   log(`        A agent ${encodeHashToBase64(a.agent).slice(0, 20)}…`);
   log(`        B agent ${encodeHashToBase64(b.agent).slice(0, 20)}…`);
 
+  // Introduce them directly — no bootstrap server, no relay, no third party.
+  // This is what the app's Network tab does when you paste peer info across.
+  const [infoA, infoB] = await Promise.all([
+    a.admin.agentInfo({ dna_hashes: null }),
+    b.admin.agentInfo({ dna_hashes: null }),
+  ]);
+  await Promise.all([
+    a.admin.addAgentInfo({ agent_infos: infoB }),
+    b.admin.addAgentInfo({ agent_infos: infoA }),
+  ]);
+  ok("introduced directly — peer info swapped both ways, no bootstrap server");
+
   // A is the root of this network (its key is in initial_members), so A
   // accredits B. This is the only thing a root can do that nobody else can.
   let membership;
