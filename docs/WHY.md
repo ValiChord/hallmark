@@ -67,6 +67,47 @@ whose parts would flow through it.
 > highest-value check anyone can run on this project**, but the "no owner" claim
 > no longer depends on it.
 
+### The coalition asked for infrastructure three times and assigned it nobody
+
+Read 2 September 2026 across both recommendation categories. This is the
+strongest single piece of evidence the project has, and it is checkable in a
+browser in five minutes.
+
+| | Recommendation | Term | Owner named |
+|---|---|---|---|
+| #4 | Establish Database of Accredited Vendors to Verify Identities and Quality Standards | Long | none |
+| #8 | Software, "potentially hosted through a third party", to query OEM, carrier and production-approval-holder databases and validate each ARC field | Medium | none |
+| #9 | Establish Voluntary Industry Database of Back-to-Birth Parts Documentation | Long | none |
+
+**#4 is the recommendation this project answers**, and an earlier draft of these
+documents pointed at #9 instead. #9 is an archive of certificates; #4 is a
+register of who is entitled — which is the trust list, named by the industry.
+
+**Two absences, confirmed across all thirteen:**
+
+1. **No recommendation says who is entitled to sign a release certificate.** The
+   coalition's own account of the fraud, under #5, notes the counterfeits carried
+   "fairly accurate depictions of an authorized signature" — so they identified
+   the problem, and answered it with better document-verification tooling. That
+   checks whether a signature is well-formed, never whether the signer held
+   approval.
+2. **No recommendation says how a vendor is de-accredited** — no grounds, no
+   deciding authority, no process. This is the harder half and it is missing
+   entirely.
+
+The second absence is worth sitting with. Removal is where the competition-law
+exposure lives (see below), so a coalition of competitors specifying it would be
+writing down the mechanics of a collective boycott. **That they left it blank is
+consistent with the constraint being real — but note this is inference. The
+coalition does not say why.**
+
+**Why a register alone would not close the gap.** #4 as described is a
+current-status lookup: accreditation certificates, recent audits, contact
+details. It cannot answer *was this vendor accredited on the date they signed
+this certificate?* — a question about the past. A current-status list has one
+answer where the situation has two, which is the same collapse §10.1 of the spec
+calls the most important thing to get right.
+
 ### Legislators have looked at it and not filled the gap
 
 The US **Aviation Supply Chain Safety and Security Digitization Act** passed the
@@ -179,11 +220,19 @@ rule design both need a competition lawyer.
 
 ## What would kill this
 
-- **Recommendation #9 acquires an owner.** As of 1 September 2026 it has none,
-  and the coalition has published nothing in 2026 at all. If an OEM funds a
-  registry and hands it over, the opening closes. *Note the ambiguity honestly:
-  an unowned recommendation in a coalition that has gone quiet may mean nobody
-  wants it, rather than that it is available.*
+- **Recommendations #4 and #9 acquire an owner.** As of 2 September 2026 neither
+  has one, and the coalition has published nothing in 2026 at all. If an OEM
+  funds a registry and hands it over, the opening narrows.
+
+  **Narrows, not closes — this was overstated in an earlier draft.** A funded
+  registry still has to decide whose signatures it accepts, and still has to
+  decide how a vendor gets removed and on what grounds. The coalition asked for
+  neither, so an owner would inherit both problems unsolved. What changes is the
+  position: supplier to that registry rather than the standard everyone adopts.
+  A worse business, not a dead one.
+
+  *Note the ambiguity honestly: an unowned recommendation in a coalition that
+  has gone quiet may mean nobody wants it, rather than that it is available.*
 - **A regulator names a system of record.** EASA's blockchain study concluded in
   September 2024 that regulators would need to issue guidelines first — they
   looked and stepped back. That could change.

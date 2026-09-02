@@ -50,28 +50,63 @@ engine parts with falsified airworthiness paperwork.
 
 Airbus, Boeing, GE Aerospace, Safran, Delta, United, American and others formed
 a coalition in response. After a nine-month review they published thirteen
-unanimous recommendations. Number nine is:
+recommendations.
 
-> **"Establish Voluntary Industry Database of Back-to-Birth Parts
-> Documentation"**
->
-> — [Aviation Supply Chain Integrity Coalition](https://aviationsupplychainintegrity.com/recommended-actions/documents-traceability-verification/),
-> filed under *long term*
+**Three of them ask for shared infrastructure. All three are assigned to
+nobody.**
 
-**Nobody owns it.** The coalition names no organisation responsible for
-recommendation #9, and as of 2 September 2026 none has taken it on. That is not
-an oversight. Each of those companies competes with the others whose parts would
-flow through such a database, so none of them can credibly hold it.
+| | What they asked for | When | Who owns it |
+|---|---|---|---|
+| **#4** | **"Establish Database of Accredited Vendors to Verify Identities and Quality Standards"** | Long term | **nobody named** |
+| #8 | Software to check certificate fields against manufacturer and airline databases | Medium term | "potentially a third party" |
+| #9 | "Establish Voluntary Industry Database of Back-to-Birth Parts Documentation" | Long term | **nobody named** |
 
-Governments agree the problem is real. The US *Aviation Supply Chain Safety and
-Security Digitization Act* passed the House in March 2026 — but it does not build
-anything. It orders a study into why the industry has not digitised.
+*Source: the coalition's own [vendor accreditation](https://aviationsupplychainintegrity.com/recommended-actions/vendor-accreditation/)
+and [document traceability](https://aviationsupplychainintegrity.com/recommended-actions/documents-traceability-verification/)
+pages, read 2 September 2026.*
 
-**Hallmark is not that database.** It is the layer underneath one: the rule for
-deciding whose signature counts. That is the part no single competitor can own,
-and the part the existing standard explicitly leaves out — ATA Spec 2000 Chapter
-16 defines how a signed certificate travels, and says it does not cover how
-companies authorise their signers.
+**Recommendation #4 is the one this project answers.** A shared list of who is
+accredited, so anyone can check an identity — that is a trust list, in their own
+words, asked for by the industry and held by no one.
+
+### Two things they did not ask for
+
+Across all thirteen, in both categories:
+
+- **Nothing says who is entitled to sign a release certificate.**
+- **Nothing says how an accredited vendor is removed** — no grounds, no
+  authority, no process.
+
+The second is the harder one, and its absence is telling. A list you can never
+be taken off is not a trust list; it is a directory.
+
+### Why a list on its own would not fix this
+
+A database of accredited vendors tells you who is approved **today**. Ask it the
+question that actually matters — *was this shop approved on the day they signed
+this certificate, three years ago?* — and it has no answer.
+
+That is the same collapse this whole project is about. A current-status lookup
+has one answer where the situation has two.
+
+And a database of stored certificates has the mirror problem: if you cannot
+establish that each signer held approval when they signed, you have built a very
+tidy filing cabinet full of unchecked claims.
+
+### So Hallmark is not a database, and does not need one
+
+It is the layer underneath: the rule for deciding whose signature counted, and
+when. It is built to sit under a database rather than compete with one — records
+carry fingerprints and pointers, not documents, so a shared archive can hold the
+paperwork while Hallmark answers whether it was properly signed.
+
+The difference is which way the dependency runs. **Hallmark works when no
+database exists. A database does not work without something like Hallmark.**
+
+Governments agree the problem is real, without solving it. The US *Aviation
+Supply Chain Safety and Security Digitization Act* passed the House in March
+2026 — but it builds nothing. It orders a study into why the industry has not
+digitised.
 
 The full evidence, with citations you can check, is in
 **[docs/WHY.md](docs/WHY.md)**.
