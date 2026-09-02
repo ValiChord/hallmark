@@ -237,8 +237,9 @@ function AirworthinessPage() {
 
             <p className="text-xs leading-relaxed text-muted-foreground">
               {BLOCK_11.find((b) => b.id === status)?.note}. Order 8130.21J ¶11.k permits exactly
-              these three terms on this path — unlike the return-to-service vocabulary, this list is
-              not a guess.
+              these three terms on this path — "enter one of the terms below", a closed list. The
+              return-to-service path has its own five, from AC 43-9D Table B-1, and the zome rejects
+              a term from the wrong one.
             </p>
 
             <Button type="submit" className="self-start">
