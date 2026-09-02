@@ -67,6 +67,145 @@ whose parts would flow through it.
 > highest-value check anyone can run on this project**, but the "no owner" claim
 > no longer depends on it.
 
+### ⭐ The strongest evidence this project has: a word that never appears
+
+The coalition's **[Final Report and Recommendations, October 2024](https://www.aviationsuppliers.org/asa/files/cclibraryfiles/filename/000000005402/Aviation%20Supply%20Chain%20Integrity%20Coalition%20-%20Report%20-%20FINAL.pdf)**
+is the industry's definitive answer to the largest documentation fraud in its
+history — nine months, 38 experts across 24 organisations, thirteen unanimous
+recommendations.
+
+Searched in full on 2 September 2026, these terms occur **zero times**:
+
+`revoked` · `revocation` · `suspended` · `expired` · `lapsed` · `withdrawn`
+
+Every one of the 14 uses of "valid" concerns whether a *document* is authentic or
+its fields match — never whether an approval was live on a given date.
+
+*Method, because a convenient null result deserves suspicion:* the check was run
+against control terms in the same extracted text (`accreditation` 52,
+`traceability` 38, `signature` 10, `AOG` 41) and repeated against the raw
+pre-cleanup text. Absent both ways.
+
+**The report describes the FAA removing Transonic and never names the general
+problem.**
+
+### What the coalition did ask for, and why the shape is wrong
+
+Recommendation #8 names the need exactly:
+
+> "...the system will verify that the part number and serial number match
+> authorized data, the issuance date is within valid limits, and **the signatory
+> is an authorized individual**."
+
+And in the same paragraph specifies the mechanism: a third-party system
+*"creating Application Programming Interfaces (APIs) to facilitate **real-time**
+data querying"* of OEM, air carrier and production-approval-holder databases.
+
+**A real-time query answers what is true now. It cannot answer what was true on
+the day of signing.** That is the whole distinction this project exists to make,
+and the industry's own plan does not contain it.
+
+### The cases this actually covers
+
+Not hypotheticals. Each is a genuine person signing a genuine-looking document,
+where the entitlement behind it had ended:
+
+| Case | What happened |
+|---|---|
+| **Aviatronics LLC** | Surrendered its FAA repair station certificate 3 Nov 2016; a former employee continued issuing 8130-3s in its name afterwards |
+| **Sauer Flugmotorenbau** | Certificates invalidated by the German LBA, 2023 (EASA SUP register, 16 June 2023) |
+| **Aeromotory s.r.o.** | Improper overhaul and **withdrawal of approval**, 2026 |
+| **Transonic Aviation Consultants** | The accreditor that certified AOG Technics; **removed by the FAA in April 2024** when AC 00-56B Change 1 dropped the TAC-2000 standard |
+
+Transonic is the one that argues for chain revocation rather than a flat list.
+When an accreditor is removed, everything it accredited is resting on an approval
+that no longer exists — and nothing propagates that today.
+
+⚠️ *The Aviatronics detail is second-hand; the primary Federal Register notice was
+not retrieved. Pull it before citing it to anyone.*
+
+### ⚠️ What AOG Technics does and does not prove
+
+Earlier drafts leaned on AOG Technics as the motivating case. **It only partly
+supports this project, and the distinction matters.**
+
+The organisations named on the forged certificates — Safran among them — were
+**real and validly approved**. CFM identified 72 falsified documents; in each
+confirmed case the named organisation said the form had not come from them. So a
+register of approved *organisations* returns "approved ✓" for every one of them,
+and catches nothing. AOG Technics itself was a distributor and needed no approval
+to hold, so it had no entry to be missing from.
+
+What the coalition's own report records is more useful. The forgeries bore
+
+> "fake signatures of actual Safran Aircraft Engines employees, while others were
+> supposedly signed off by **individuals who no longer worked at the company**.
+> The names of other signatories appeared to be wholly fabricated, complete with
+> fake LinkedIn profiles."
+
+The middle category is an entitlement failure at the level of a person. But be
+precise about what follows: **cryptographic signing does defeat the AOG attack**,
+because AOG could never obtain a certificate in Safran's name. That is exactly
+what Boeing and Aeroxchange are deploying, and it is why the honest framing of
+this project is *complement*, not *replacement*.
+
+Also worth carrying: **AOG Technics was accredited**, by Transonic. Any check
+asking "is this a legitimately accredited distributor?" would have said yes,
+in 2022. The rot was one layer up.
+
+### The competition, stated fairly
+
+- **Boeing / Southwest / Aeroxchange eARC** — first electronic 8130-3, October
+  2025, X.509, rolling out across nine Boeing repair centres. Authenticates
+  signer *identity*. The nearest thing to a competitor, and the one to watch: an
+  entitlement check is a modest increment on what they already ship.
+- **GE Aerospace** is building an in-house tool to verify "the identity,
+  employment, and authority of signatories" using AI. The problem statement is
+  ours; the approach is per-company and heuristic.
+- **SkyThread** — parts track-and-trace, one lighthouse deployment (AFI KLM E&M /
+  Parker, 787). Roughly $1.2M raised, ~13 staff, no 2026 news found. Its material
+  never mentions accreditation, entitlement or revocation.
+- **ATA Spec 42** — aviation PKI. Verifies a key belongs to a legally-existing
+  company (incorporation plus a DUNS number). **No check of any airworthiness
+  privilege, and no regulator in its list of who may request revocation.**
+- **IATA Aviation Security Trust Framework (Jan 2025)** — architecturally the
+  closest thing that exists: authorised-issuer lists, issuer authority checking,
+  revocation status. **Scoped to airport security programmes; airworthiness and
+  Form 1 appear nowhere in it.** If IATA extends it to parts, they have the
+  convening power and this project does not.
+
+### ⚠️ Where this sits in practitioners' actual priorities
+
+Honest ranking from the evidence, worst-hurting first: records volume and format
+inconsistency; vendor trustworthiness; missing documents grounding aircraft
+(£20k–£140k per hour); improper maintenance by properly approved shops (three
+quarters of FAA suspected-parts cases); unapproved production by people outside
+the system entirely (~90% of FAA notices).
+
+**Deliberate document forgery is roughly sixth**, and rare — one FAA notice in
+sixteen years turns on it. Two regulators wrote new receiving-inspection guidance
+after the scandal (FAA AC 20-154A, July 2024; UK CAA CAP 3037, December 2024) and
+**neither added a step to verify the issuer's entitlement.**
+
+This does not make the gap unreal. It makes it *narrow, unranked, and not
+currently anybody's budget line* — which is the thing to establish before
+building further.
+
+### Registers already do more than earlier drafts claimed
+
+- **UK CAA publishes approval dates and revocation dates**, in separate approved,
+  suspended and revoked lists. In AOG Technics' own jurisdiction, a stranger can
+  already answer much of this. PDF only, no API, single current snapshot.
+- **EASA** publishes suspension and valid-until dates for ~1,000 foreign Part-145
+  organisations, machine-readable. **No approval start date**, so point-in-time
+  questions still cannot be answered.
+- **FAA** publishes contact details only — no dates, no bulk download — and
+  revoked stations simply disappear.
+- **Nobody publishes versioned snapshots.** No register anywhere returns "the
+  list as it stood on 3 March 2023", and a suspension followed by reinstatement
+  erases the window entirely. **That residue is real and is the archival half of
+  what this project addresses.**
+
 ### The coalition asked for infrastructure three times and assigned it nobody
 
 Read 2 September 2026 across both recommendation categories. This is the
@@ -139,14 +278,25 @@ Read this two ways, and both matter:
 **Once as a refusal.** ATA Spec 2000 Chapter 16 already defines the electronic
 release certificate and, importantly, already chains: each new certificate
 references the previous one for that part and carries it along with its signature
-intact. But the specification states that it does not cover the internal
-processes companies use **to authorise the users or signers of that data** —
-reasonably, since those are company-specific.
+intact. What it does not carry is the signer's **entitlement**.
 
-> *Checkable:* ATA Spec 2000, *Authorized Release Certificate*, Chapter 16,
-> Revision 2019.1, §16-2 1.2 "Scope". Listed at $0.00 on the A4A publications
-> site, though obtaining it is not frictionless. The chaining rule is in
-> §16-2 2.1.
+> ⚠️ **A quote was removed here on 2 September 2026.** Every earlier draft
+> attributed to Chapter 16 the wording "the internal processes companies use to
+> authorise the users or signers of that data". **That phrase could not be found
+> in any source.** We were quoting something we could not produce, in a project
+> whose whole argument is that claims should be checkable.
+>
+> *What is verified instead:* Transport Canada AC 571-006 §6(4) — Chapter 16
+> "does not replace any regulatory requirements or guidance regarding the ARC
+> Form One and electronic signatures." And the regulatory chain does stop short,
+> checkably: **14 CFR 145.161** requires a repair station to hold a roster of
+> personnel authorised to sign a maintenance release and to make it accessible
+> **to the FAA** — not to a receiving organisation. The permission to sign
+> electronically is granted in OpSpec A025, or an EASA exposition, neither of
+> which is public or machine-readable.
+>
+> Chapter 16 is free but behind a registration form at publications.airlines.org.
+> **Registering and reading §16-1 is an open task and would settle this.**
 
 Read those together. The standard defines how a signed certificate travels and
 how it chains. It declines to say **who is entitled to sign one**. That is the

@@ -43,72 +43,86 @@ Most systems collapse this into a single word — valid, or not valid. Then
 either history gets erased, or a shop that lost its approval keeps trading on
 old credentials.
 
-## This gap is not hypothetical
+## This is not the problem the industry is already fixing
 
-In 2023 a UK distributor, AOG Technics, was found to have sold thousands of jet
-engine parts with falsified airworthiness paperwork.
+Signing a certificate digitally is being solved, properly, by people with more
+resources than this project will ever have. In **October 2025** Boeing, Southwest
+and Aeroxchange shipped the first electronic 8130-3 using ordinary X.509
+certificates. It proves the document has not been altered and that the signer is
+who they say they are.
 
-Airbus, Boeing, GE Aerospace, Safran, Delta, United, American and others formed
-a coalition in response. After a nine-month review they published thirteen
-recommendations.
+**That is a different question from this one.** It proves *who signed*. It does
+not prove *they were still allowed to*.
 
-**Three of them ask for shared infrastructure. All three are assigned to
-nobody.**
+### Approvals end. Nothing accounts for that.
 
-| | What they asked for | When | Who owns it |
-|---|---|---|---|
-| **#4** | **"Establish Database of Accredited Vendors to Verify Identities and Quality Standards"** | Long term | **nobody named** |
-| #8 | Software to check certificate fields against manufacturer and airline databases | Medium term | "potentially a third party" |
-| #9 | "Establish Voluntary Industry Database of Back-to-Birth Parts Documentation" | Long term | **nobody named** |
+Three real cases, all a genuine person signing a genuine-looking form:
 
-*Source: the coalition's own [vendor accreditation](https://aviationsupplychainintegrity.com/recommended-actions/vendor-accreditation/)
-and [document traceability](https://aviationsupplychainintegrity.com/recommended-actions/documents-traceability-verification/)
-pages, read 2 September 2026.*
+- **Aviatronics LLC** surrendered its FAA repair station certificate on
+  3 November 2016. A former employee **kept issuing 8130-3s in its name
+  afterwards**.
+- **Sauer Flugmotorenbau** had its certificates invalidated by the German LBA
+  in 2023.
+- **Transonic Aviation Consultants** — the body that had accredited AOG
+  Technics — was **removed by the FAA in April 2024**, leaving everything it had
+  accredited resting on an approval that no longer existed.
 
-**Recommendation #4 is the one this project answers.** A shared list of who is
-accredited, so anyone can check an identity — that is a trust list, in their own
-words, asked for by the industry and held by no one.
+A cryptographic signature catches none of these, because in each case the
+signature is real. Only a check against *what was true on the day of signing*
+catches them.
 
-### Two things they did not ask for
+### The industry asked for this, and asked for the wrong shape
 
-Across all thirteen, in both categories:
+After the AOG Technics scandal, Airbus, Boeing, GE Aerospace, Safran and the
+major US carriers spent nine months and published thirteen unanimous
+recommendations. Recommendation #8 says the system should verify
 
-- **Nothing says who is entitled to sign a release certificate.**
-- **Nothing says how an accredited vendor is removed** — no grounds, no
-  authority, no process.
+> "...the part number and serial number match authorized data, the issuance date
+> is within valid limits, and **the signatory is an authorized individual**."
 
-The second is the harder one, and its absence is telling. A list you can never
-be taken off is not a trust list; it is a directory.
+So the need is named. But the same paragraph specifies the mechanism: *"creating
+Application Programming Interfaces (APIs) to facilitate **real-time** data
+querying"*.
 
-### Why a list on its own would not fix this
+**A real-time query answers what is true now. It cannot answer what was true
+then.**
 
-A database of accredited vendors tells you who is approved **today**. Ask it the
-question that actually matters — *was this shop approved on the day they signed
-this certificate, three years ago?* — and it has no answer.
+### The word that never appears
 
-That is the same collapse this whole project is about. A current-status lookup
-has one answer where the situation has two.
+The report is the industry's definitive answer to the biggest documentation
+fraud in its history. Searching the whole document, these appear **zero times**:
 
-And a database of stored certificates has the mirror problem: if you cannot
-establish that each signer held approval when they signed, you have built a very
-tidy filing cabinet full of unchecked claims.
+> `revoked` · `revocation` · `suspended` · `expired` · `lapsed` · `withdrawn`
 
-### So Hallmark is not a database, and does not need one
+Not once. Every use of "valid" refers to whether a *document* is authentic or
+its fields match — never to whether an approval was live on a given date.
 
-It is the layer underneath: the rule for deciding whose signature counted, and
-when. It is built to sit under a database rather than compete with one — records
-carry fingerprints and pointers, not documents, so a shared archive can hold the
-paperwork while Hallmark answers whether it was properly signed.
+The report even describes the FAA removing Transonic. It records the event and
+never names the general problem.
 
-The difference is which way the dependency runs. **Hallmark works when no
-database exists. A database does not work without something like Hallmark.**
+*Source: [Aviation Supply Chain Integrity Coalition, Final Report and
+Recommendations, October 2024](https://www.aviationsuppliers.org/asa/files/cclibraryfiles/filename/000000005402/Aviation%20Supply%20Chain%20Integrity%20Coalition%20-%20Report%20-%20FINAL.pdf).
+Read in full, 2 September 2026; the null result was checked against control
+terms in the same document.*
 
-Governments agree the problem is real, without solving it. The US *Aviation
-Supply Chain Safety and Security Digitization Act* passed the House in March
-2026 — but it builds nothing. It orders a study into why the industry has not
-digitised.
+### Said plainly
 
-The full evidence, with citations you can check, is in
+Everything needed to prove **who signed** exists, works, and is being deployed.
+Nothing establishes **whether they were entitled to, at that moment** — or
+notices when that entitlement later ends.
+
+That is the whole of what Hallmark does. It is a complement to what Boeing and
+Aeroxchange are building, not a competitor to it.
+
+**The honest caveat**, because it should not be discovered later: a gap nobody
+names may be a gap nobody will pay to fill. The coalition may have omitted this
+deliberately — their goal is stopping bad parts entering the fleet, not
+supporting an audit twenty years on. The reason to think otherwise is that
+lessors re-verify records at every aircraft transfer and airframes fly for 25 to
+40 years, so somebody is asking about the past. That is reasoning, not evidence,
+and it is the first thing to test with a practitioner.
+
+The full evidence, with the competitors and the arguments against, is in
 **[docs/WHY.md](docs/WHY.md)**.
 
 ## What Hallmark does
@@ -126,8 +140,10 @@ In the story above: **historically valid, yes. Currently trusted, no.**
 
 **Idea two: say what you did *not* check.**
 
-Real failures in this industry are rarely forged signatures. They are honest
-people signing something broader than what they actually looked at.
+Forgery is rare — one FAA unapproved-parts notice in sixteen years turns on a
+forged document. Far more common is a real, approved person signing a real form
+that claims more than they actually looked at. Nothing anywhere records the
+difference.
 
 So a Hallmark record has a second list. The signer writes down what they did
 not observe.
