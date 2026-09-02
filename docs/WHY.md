@@ -112,7 +112,7 @@ where the entitlement behind it had ended:
 
 | Case | What happened |
 |---|---|
-| **Aviatronics LLC** | Surrendered its FAA repair station certificate 3 Nov 2016; a former employee continued issuing 8130-3s in its name afterwards |
+| **Aviatronics LLC** | Surrendered FAA certificate ZVNR690L on 3 Nov 2016; a former employee continued issuing 8130-3s in its name afterwards. **Now fully sourced — see below** |
 | **Sauer Flugmotorenbau** | Certificates invalidated by the German LBA, 2023 (EASA SUP register, 16 June 2023) |
 | **Aeromotory s.r.o.** | Improper overhaul and **withdrawal of approval**, 2026 |
 | **Transonic Aviation Consultants** | The accreditor that certified AOG Technics; **removed by the FAA in April 2024** when AC 00-56B Change 1 dropped the TAC-2000 standard |
@@ -121,8 +121,40 @@ Transonic is the one that argues for chain revocation rather than a flat list.
 When an accreditor is removed, everything it accredited is resting on an approval
 that no longer exists — and nothing propagates that today.
 
-⚠️ *The Aviatronics detail is second-hand; the primary Federal Register notice was
-not retrieved. Pull it before citing it to anyone.*
+#### Aviatronics, from the primary source — the reference case
+
+✅ *Verified 2 September 2026 against
+[FAA SAFO 20010](https://www.faa.gov/sites/faa.gov/files/other_visit/aviation_industry/airline_operators/airline_safety/SAFO20010.pdf),
+dated 24 April 2020, read in full. This supersedes the earlier second-hand note.*
+
+Subject line: *"Fraudulent Documentation and Possible Improper Maintenance on
+Accessories/Articles by a Previous Employee of Aviatronics, LLC, Miami Lakes,
+Florida."* The repair station held FAA Certificate No. **ZVNR690L**.
+
+> "An investigation conducted by the FAA revealed that an individual previously
+> employed by Aviatronics, LLC, **continued to approve articles for return to
+> service using Aviatronics, LLC, documentation even after the company
+> surrendered its FAA repair station certificate on November 3, 2016.** This
+> individual signed and issued intentionally false work orders and approvals for
+> return to service (FAA Form 8130-3, Airworthiness Approval Tag)…"
+
+**Three facts worth carrying into any pitch:**
+
+1. **The signature and the document were genuine in form.** A real person, real
+   company paperwork, a real 8130-3. Every existing check — X.509 identity,
+   document integrity, field matching — passes. Only the entitlement had ended.
+2. **The detection lag was three and a half years.** Certificate surrendered
+   November 2016; alert published April 2020.
+3. **The FAA's remedy is a manual, industry-wide records hunt.** Verbatim:
+   "Aircraft owners, operators, manufacturers, maintenance organizations, parts
+   suppliers, and parts distributors should inspect their aircraft, aircraft
+   records, and parts inventories for any articles/parts approved for return to
+   service by Aviatronics, LLC, after November 3, 2016."
+
+That last one is the cost of the missing layer, stated by the regulator: when
+nobody can ask *was this signer still entitled on the day they signed*, the
+fallback is every operator in the world searching their own records by hand,
+years late. It is also precisely the query `historically_valid` answers.
 
 ### ⚠️ What AOG Technics does and does not prove
 
@@ -295,8 +327,19 @@ intact. What it does not carry is the signer's **entitlement**.
 > electronically is granted in OpSpec A025, or an EASA exposition, neither of
 > which is public or machine-readable.
 >
-> Chapter 16 is free but behind a registration form at publications.airlines.org.
-> **Registering and reading §16-1 is an open task and would settle this.**
+> **Attempted again 2 September 2026, and still open.** The A4A product page
+> lists Chapter 16 at **$0.00 but marked "Sold out"**, obtainable only through a
+> cart-and-checkout flow requiring an account, or free to ATA e-Business Program
+> members. There is no direct download. A separate search for the disputed
+> wording, or any quotation of §16-1's scope, returned nothing in any indexed
+> source — **two independent attempts have now failed to find it, which is itself
+> evidence the phrase was never in the document.**
+>
+> **This is the cheapest open task on the project and it needs a human**: create
+> an account at publications.airlines.org, obtain Chapter 16, read §16-1, and
+> record what the scope section actually says. Until then, cite Transport Canada
+> AC 571-006 §6(4) and 14 CFR 145.161 — both free, both verified — and cite
+> nothing from Chapter 16 itself.
 
 Read those together. The standard defines how a signed certificate travels and
 how it chains. It declines to say **who is entitled to sign one**. That is the

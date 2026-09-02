@@ -58,9 +58,10 @@ not prove *they were still allowed to*.
 
 Three real cases, all a genuine person signing a genuine-looking form:
 
-- **Aviatronics LLC** surrendered its FAA repair station certificate on
-  3 November 2016. A former employee **kept issuing 8130-3s in its name
-  afterwards**.
+- **Aviatronics LLC** surrendered FAA repair station certificate ZVNR690L on
+  **3 November 2016**. A former employee **kept issuing 8130-3s in its name
+  afterwards** — the FAA's words are "intentionally false work orders and
+  approvals for return to service".
 - **Sauer Flugmotorenbau** had its certificates invalidated by the German LBA
   in 2023.
 - **Transonic Aviation Consultants** — the body that had accredited AOG
@@ -70,6 +71,23 @@ Three real cases, all a genuine person signing a genuine-looking form:
 A cryptographic signature catches none of these, because in each case the
 signature is real. Only a check against *what was true on the day of signing*
 catches them.
+
+### What it costs to not have this
+
+The FAA published the Aviatronics alert on **24 April 2020 — three and a half
+years after the certificate was surrendered.** Its recommended action was:
+
+> "Aircraft owners, operators, manufacturers, maintenance organizations, parts
+> suppliers, and parts distributors **should inspect their aircraft, aircraft
+> records, and parts inventories** for any articles/parts approved for return to
+> service by Aviatronics, LLC, after November 3, 2016."
+
+An industry-wide manual records hunt, because there is no way to ask the question
+automatically. That is the current answer to "was the signer still entitled?" —
+and it arrives years late.
+
+*Source: [FAA SAFO 20010](https://www.faa.gov/sites/faa.gov/files/other_visit/aviation_industry/airline_operators/airline_safety/SAFO20010.pdf),
+24 April 2020, read in full.*
 
 ### The industry asked for this, and asked for the wrong shape
 
