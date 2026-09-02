@@ -18,22 +18,28 @@ ATA Spec 2000 Chapter 16 already defines the electronic release certificate. It 
 the signature, and the chain: each certificate references the previous one for that part and
 carries it forward with its signature intact.
 
-What it does not carry is **the signer's entitlement**. Chapter 16 specifies the format and the
-signature; whether the signing organisation held an airworthiness approval at that moment is left
-to each regulator's own arrangements, and those arrangements are private. Under FAA rules the
-roster of people permitted to sign lives in the repair station's own manual (14 CFR 145.161),
-accessible to the FAA and to nobody else. The approval to sign electronically is granted in a
-document — OpSpec A025, or an EASA exposition — that is neither public nor machine-readable.
+**Its scope section excludes the signer's entitlement, in terms.** §1.2 limits the specification to
+the data and processes needed to exchange electronic part certification forms, and states that it
+does not include the internal processes companies use to generate the data, to
+**"authorize users or signers of the data"**, or to process, store or repurpose it. The stated
+rationale is that such processes are company-specific, so there is no need — and it is not
+desirable — to standardise them.
 
-That is workable between two trading partners who already know each other. It fails for a stranger
-checking a chain twenty years later, across companies that may no longer exist.
+That reasoning is sound for two trading partners who already know each other. It fails for a
+stranger checking a chain twenty years later, across companies that may no longer exist.
 
-> **Provenance note.** Earlier drafts of this section quoted Chapter 16 as excluding "the internal
-> processes companies use to authorise the users or signers of that data". **That wording could not
-> be found in any source and has been removed.** The nearest verified statement is Transport Canada
-> AC 571-006 §6(4): Chapter 16 "does not replace any regulatory requirements or guidance regarding
-> the ARC Form One and electronic signatures." Chapter 16 itself is free but behind a registration
-> form at publications.airlines.org; **reading §16-1 and settling this is an open task.**
+The exclusion is not theoretical. §2.2 **requires** a digital certificate for the individual signing
+an electronic form, to at least Medium Software assurance under ATA Spec 42, with the organisation
+in the certificate corresponding to Block 4. So Chapter 16 mandates proof of *identity* while
+explicitly declining to cover *entitlement* — and Spec 42, which supplies the certificate, verifies
+an organisation's legal existence rather than any airworthiness privilege.
+
+**This format specifies what falls between those two standards, and nothing else.**
+
+> *Verified 2 September 2026 against ATA Spec 2000, Chapter 16, Revision 2019.1 §1.2, §1.3, §2.1
+> and §2.2 — a licensed copy, read directly. Earlier drafts paraphrased §1.2 while presenting the
+> paraphrase as a quotation, and a search of public sources could not find it because the document
+> is not indexed. The substance was correct; the attribution was not.*
 
 **This format specifies the excluded layer, and nothing else.**
 

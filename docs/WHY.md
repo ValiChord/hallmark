@@ -312,34 +312,52 @@ release certificate and, importantly, already chains: each new certificate
 references the previous one for that part and carries it along with its signature
 intact. What it does not carry is the signer's **entitlement**.
 
-> ⚠️ **A quote was removed here on 2 September 2026.** Every earlier draft
-> attributed to Chapter 16 the wording "the internal processes companies use to
-> authorise the users or signers of that data". **That phrase could not be found
-> in any source.** We were quoting something we could not produce, in a project
-> whose whole argument is that claims should be checkable.
+> ✅ **SETTLED 2 September 2026 against a licensed copy of the document.**
+> Ceri obtained Chapter 16, Revision 2019.1, and it was read directly.
 >
-> *What is verified instead:* Transport Canada AC 571-006 §6(4) — Chapter 16
-> "does not replace any regulatory requirements or guidance regarding the ARC
-> Form One and electronic signatures." And the regulatory chain does stop short,
-> checkably: **14 CFR 145.161** requires a repair station to hold a roster of
-> personnel authorised to sign a maintenance release and to make it accessible
-> **to the FAA** — not to a receiving organisation. The permission to sign
-> electronically is granted in OpSpec A025, or an EASA exposition, neither of
-> which is public or machine-readable.
+> **§1.2 "Scope"** limits the specification to the data and processes needed to
+> exchange electronic part certification forms, and states that it does *not*
+> include the internal processes companies use to generate the data, to
+> **"authorize users or signers of the data"**, or to process, store or repurpose
+> it. The rationale given is that such processes are company-specific and
+> governed by company policy or regulatory guidance, so standardising them is
+> neither necessary nor desirable.
 >
-> **Attempted again 2 September 2026, and still open.** The A4A product page
-> lists Chapter 16 at **$0.00 but marked "Sold out"**, obtainable only through a
-> cart-and-checkout flow requiring an account, or free to ATA e-Business Program
-> members. There is no direct download. A separate search for the disputed
-> wording, or any quotation of §16-1's scope, returned nothing in any indexed
-> source — **two independent attempts have now failed to find it, which is itself
-> evidence the phrase was never in the document.**
+> **The exclusion is explicit, and it names our layer.** The project's long-held
+> claim was correct in substance.
 >
-> **This is the cheapest open task on the project and it needs a human**: create
-> an account at publications.airlines.org, obtain Chapter 16, read §16-1, and
-> record what the scope section actually says. Until then, cite Transport Canada
-> AC 571-006 §6(4) and 14 CFR 145.161 — both free, both verified — and cite
-> nothing from Chapter 16 itself.
+> ⚠️ **But the earlier attribution was not.** Every draft presented a paraphrase
+> — British spelling, reordered — as a verbatim quotation, and two public-source
+> searches failed to find it, because the document is DRM-protected and not
+> indexed anywhere. For several hours this project believed it had invented the
+> quote. **Paraphrase presented as quotation is the failure mode, and it survived
+> weeks of review.** Quote from the document or mark the paraphrase.
+>
+> **§2.2 is the other half, and it is stronger than expected.** Chapter 16
+> *requires* a digital certificate for the individual signing an electronic form,
+> to at least Medium Software assurance under **ATA Spec 42**, with the
+> organisation named in the certificate corresponding to Block 4. So the
+> specification mandates proof of **identity** in the same document in which it
+> declines to cover **entitlement** — and Spec 42, which issues that certificate,
+> verifies legal existence (incorporation, DUNS) rather than any airworthiness
+> privilege.
+>
+> **Two standards interlock and leave the entitlement question in the hole
+> between them.** That is now demonstrable from primary sources with precise
+> citations, and it is the most defensible statement of the gap this project has.
+>
+> *Also verified:* §2.1 — the chaining rule. An issuer *should* reference the
+> immediately previous certification form for the part (tracking number, supplier
+> code, format indicator) in the Previous Certificate element of Block 12, and
+> where the previous form was electronic it should be carried forward with its
+> digital signature intact. Note "should", not "must" — which supports this
+> project's decision not to make a predecessor mandatory. §1.3 confirms the
+> specification does not replace regulatory requirements, matching the Transport
+> Canada restatement previously relied on.
+>
+> ⚠️ **Do not redistribute the document.** It is licensed per-order, watermarked
+> with the purchaser's name and postal address on every page, and marked NOT FOR
+> RESALE. Cite sections; never paste extracts into this repository.
 
 Read those together. The standard defines how a signed certificate travels and
 how it chains. It declines to say **who is entitled to sign one**. That is the

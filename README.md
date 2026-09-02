@@ -123,6 +123,25 @@ Recommendations, October 2024](https://www.aviationsuppliers.org/asa/files/cclib
 Read in full, 2 September 2026; the null result was checked against control
 terms in the same document.*
 
+### The standard says so itself
+
+ATA Spec 2000 Chapter 16 is the industry standard for exchanging these
+certificates electronically, accepted by both the FAA and EASA. Two sections of
+it, read together, are the clearest statement of this gap anywhere:
+
+- **§2.2 requires** a digital certificate for the individual signing the form, to
+  a stated assurance level, naming their organisation. Identity: mandatory.
+- **§1.2 excludes** from the specification's scope the internal processes
+  companies use to **"authorize users or signers of the data"**. Entitlement:
+  out of scope, deliberately — the reasoning being that such processes belong to
+  each company.
+
+That reasoning is sound between two firms who already know each other. It leaves
+nothing for a stranger checking a chain twenty years later.
+
+*ATA Spec 2000, Chapter 16, Revision 2019.1, §1.2 and §2.2. Read directly from a
+licensed copy, 2 September 2026.*
+
 ### Said plainly
 
 Everything needed to prove **who signed** exists, works, and is being deployed.
