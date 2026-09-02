@@ -241,7 +241,7 @@ accepted if the evidence actually demonstrates it.
 The evidence-bearing grounds are the important ones: they are **objective, published in advance,
 and checkable by any peer from the record alone**. That is the certificate-authority precedent,
 and it is what keeps a shared exclusion list from being a concerted refusal to deal. See the
-competition-law section of [`../README.md`](../README.md).
+competition-law section of [`WHY.md`](WHY.md).
 
 The `predecessor_of` and overlapping-validity tests exist to stop the rule firing on legitimate
 behaviour — a shop re-certifying the same part years later, or a station with two authorised

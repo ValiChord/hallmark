@@ -2,253 +2,220 @@
 
 [![CI](https://github.com/ValiChord/hallmark/actions/workflows/ci.yml/badge.svg)](https://github.com/ValiChord/hallmark/actions/workflows/ci.yml)
 
-**A portable attestation format for aircraft part release certificates, and a joining rule for
-deciding whose signature counts.**
+**When a repair shop signs off an aircraft part, how does a stranger check —
+years later — that the shop was allowed to sign?**
 
-A hallmark is a mark struck into an object that binds it to a claim about what it is, applied by
-an independent office, and readable by a stranger centuries later with nobody left alive to ask.
-That is the shape of the problem here.
+Hallmark is a small signed record that answers that. It sits alongside the
+release certificate and says who signed, what they were approved to do, and
+exactly what they checked.
 
-This is a specification and a demonstration. There is no platform, no operator, and no server that
-has to stay alive for a record to remain checkable.
+It is a format and a set of rules. There is no platform, no company in the
+middle, and no server that has to stay running for a record to stay checkable.
+
+---
+
+## Try it now
+
+**[Open the demo →](https://raf-workbench.onrender.com)** Nothing to install.
+Press **Load sample**, then open the **Walkthrough** tab.
+
+Five steps, about three minutes: a part is made, a repair shop works on it, a
+buyer relies on that, the shop loses its approval, and a stranger checks the
+paperwork years later.
+
+---
+
+## The problem
+
+A repair shop overhauls a part in 2026 and signs an FAA Form 8130-3 for it.
+
+In 2028 the shop loses its approval.
+
+Now you are holding that part. One question, and most systems get it wrong:
+
+> Is the 2026 paperwork worthless?
+
+**No.** The shop was genuinely approved in 2026. That document is real and
+always will be. What you should *not* do is accept a **new** certificate from
+that shop today.
+
+Most systems collapse this into a single word — valid, or not valid. Then
+either history gets erased, or a shop that lost its approval keeps trading on
+old credentials.
+
+## This gap is not hypothetical
+
+In 2023 a UK distributor, AOG Technics, was found to have sold thousands of jet
+engine parts with falsified airworthiness paperwork.
+
+Airbus, Boeing, GE Aerospace, Safran, Delta, United, American and others formed
+a coalition in response. After a nine-month review they published thirteen
+unanimous recommendations. Number nine is:
+
+> **"Establish Voluntary Industry Database of Back-to-Birth Parts
+> Documentation"**
+>
+> — [Aviation Supply Chain Integrity Coalition](https://aviationsupplychainintegrity.com/recommended-actions/documents-traceability-verification/),
+> filed under *long term*
+
+**Nobody owns it.** The coalition names no organisation responsible for
+recommendation #9, and as of 2 September 2026 none has taken it on. That is not
+an oversight. Each of those companies competes with the others whose parts would
+flow through such a database, so none of them can credibly hold it.
+
+Governments agree the problem is real. The US *Aviation Supply Chain Safety and
+Security Digitization Act* passed the House in March 2026 — but it does not build
+anything. It orders a study into why the industry has not digitised.
+
+**Hallmark is not that database.** It is the layer underneath one: the rule for
+deciding whose signature counts. That is the part no single competitor can own,
+and the part the existing standard explicitly leaves out — ATA Spec 2000 Chapter
+16 defines how a signed certificate travels, and says it does not cover how
+companies authorise their signers.
+
+The full evidence, with citations you can check, is in
+**[docs/WHY.md](docs/WHY.md)**.
+
+## What Hallmark does
+
+**Idea one: two answers, never one.**
+
+Every check returns both:
+
+| | Question it answers |
+|---|---|
+| `historically_valid` | Was this real and properly authorised when it was signed? |
+| `currently_trusted` | Should I rely on this shop for something new, today? |
+
+In the story above: **historically valid, yes. Currently trusted, no.**
+
+**Idea two: say what you did *not* check.**
+
+Real failures in this industry are rarely forged signatures. They are honest
+people signing something broader than what they actually looked at.
+
+So a Hallmark record has a second list. The signer writes down what they did
+not observe.
+
+```
+observed:      INSPECTED
+not_observed:  OVERHAULED, MODIFIED
+```
+
+A later reader cannot treat silence as a claim. If it does not say
+"overhauled", nobody overhauled it, and the record says so out loud.
+
+## What a record looks like
+
+```json
+{
+  "subject":  { "part_number": "CFM56-7B27", "serial_number": "577737" },
+  "binding":  { "document_type": "EasaForm1", "document_id": "AFX-2026-0142",
+                "certification_path": "ReturnToService" },
+  "scope":    { "observed": ["INSPECTED"], "not_observed": ["OVERHAULED"] },
+  "attester": { "organisation": "AeroFix MRO Ltd", "role": "Mro" },
+  "membership_proof_hash": "…the approval being relied on"
+}
+```
+
+It does not carry the certificate or the shop's paperwork. It carries
+fingerprints of them. That is what lets someone check it in 2046 without anyone
+still running a document store.
+
+The full format is in **[SPEC.md](SPEC.md)**.
+
+---
+
+## Run it yourself
+
+**In a browser**, no conductor, no network:
 
 ```bash
 cd demo && npm install && npm run dev
 ```
 
-Press **Load sample**, then work through the **Walkthrough** tab. Five steps: a part is made, a
-repair station works on it and records what it did *not* check, someone relies on that, the shop
-loses its approval, and a stranger checks the paperwork years later. It ends on two answers —
-**Historically valid: yes. Currently trusted: no.**
+**As a real peer-to-peer node**, with your own key and real gossip between
+machines:
 
-That pair is the entire argument. The attestation was good when it was signed and stays a real
-document; what it no longer supports is *new* reliance. Almost every system collapses those into
-one word.
+[Download the desktop installer →](https://github.com/ValiChord/hallmark/releases/tag/desktop-v0.1.0)
 
----
-
-## Two kinds of claim in this repository
-
-Worth separating, because they carry different weight and one of them you can check yourself in
-five minutes.
-
-**What the demonstration proves.** The rules run, and you can watch them refuse things. An
-accreditation chain is walked to a root; a term from the wrong side of the form is rejected; a
-revocation withdraws current trust without touching history; a third party verifies a record
-without contacting whoever signed it — across two machines, in CI, on every push. None of that
-depends on agreeing with anything below.
-
-**What the project proposes.** That the industry has a gap here, that it is the gap described in
-the next section, and that a portable format with an explicit joining rule is a reasonable answer
-to it. That is a proposition supported by published sources, not a demonstrated fact — and the
-right response to it is for someone who works in the industry to say whether it matches what they
-see.
-
-If the second turns out to be wrong, the first is still true. It just would not matter.
+It is not code-signed, so Windows will warn you. Click **More info**, then **Run
+anyway**. Setup and the two-device walkthrough are in
+**[desktop/README.md](desktop/README.md)**.
 
 ---
 
-## The gap
-
-Digital signatures are solved. Aviation has had legally valid electronic release certificates
-since **2009**, and the first electronic 8130-3 was issued in **October 2025** — a Boeing 737
-battery to Southwest, sixteen years after the standard became usable.
-
-What is not solved is the question one layer up:
-
-> **Who decides whose signature counts — when every organisation qualified to decide competes with
-> the others, and the answer must be checkable by a stranger, offline, years later?**
-
-### The industry has written the gap down twice
-
-**Once as a request.** The Aviation Supply Chain Integrity Coalition — Airbus, Boeing, GE
-Aerospace, Safran, Delta, United, American, and others — issued thirteen unanimous recommendations
-after the AOG Technics forged-parts scandal. **Recommendation #9: "Establish Voluntary Industry
-Database of Back-to-Birth Parts Documentation."** Marked long term. **Owned by nobody**, verified
-1 September 2026. None of them can hold it, because each competes with the others whose parts
-would flow through it.
-
-> *Checkable:* the coalition's own recommendation listing names no owner for #9; its 25 September
-> 2025 progress report covers only the five short-term recommendations and is silent on #9; and the
-> coalition has published nothing at all in 2026. The report is email-gated — **getting it and
-> confirming this is the single highest-value check anyone can run on this project.**
-
-**Once as a refusal.** ATA Spec 2000 Chapter 16 already defines the electronic release certificate
-and, importantly, already chains: each new certificate references the previous one for that part
-and carries it along with its signature intact. But the specification states that it does not
-cover the internal processes companies use **to authorise the users or signers of that data** —
-reasonably, since those are company-specific.
-
-> *Checkable:* ATA Spec 2000, *Authorized Release Certificate*, Chapter 16, Revision 2019.1,
-> §16-2 1.2 "Scope". Listed at $0.00 on the A4A publications site, though obtaining it is not
-> frictionless. The chaining rule is in §16-2 2.1.
-
-Read those together. The standard defines how a signed certificate travels and how it chains. It
-declines to say **who is entitled to sign one**. That is the trust list problem, named by the
-standard as a deliberate scope exclusion, and asked for by the industry as an unowned
-recommendation.
-
-### Forgery is not the problem
-
-This determines what to build, so it belongs near the top.
-
-Across the documented disputes in this domain and in the adjacent marine one, the failures are not
-forged signatures. They are **omission, entitlement, inconsistency, and contractual fiat** — most
-sharply, assertions made wider than what the signer actually observed. A real officer signing a
-real document with a real signature, certifying something they did not witness, defeats every
-signature check ever built.
-
-So the format's job is not to prove a signature genuine. It is to make the claim **narrow,
-explicit, and scoped** — including recording what the signer did *not* observe, so absence is
-never read as assent.
-
----
-
-## What this is, and is not
-
-**Is:** a data format, verification rules, and a membership rule expressed as code that anyone can
-run and any stranger can audit.
-
-**Is not:** a platform, a registry, a database, a company you route data through, or a network you
-must join before you get value.
-
-### Non-goals
-
-- **We do not perform the inspection.** A format can scope, bind and timestamp a claim. It cannot
-  make the claim true. Records are not inspections, and any pitch implying otherwise should be
-  treated as suspect — including ours.
-- **We do not reconstruct history.** Nothing here helps parts already in service with missing
-  paperwork. It helps parts entering service from now on. That is real, it is probably why nobody
-  has funded it, and it should be said in the first paragraph of any pitch rather than discovered
-  by a sceptic in the second meeting.
-- **We do not replace the regulator.** Where a regulator runs the register, work upstream and feed
-  it.
-
----
-
-## Design constraints
-
-Not preferences. Each is a cause of death observed in a real project — see
-[`docs/RESEARCH-ARCHIVE.md`](docs/RESEARCH-ARCHIVE.md).
-
-1. **Value at N=2.** Two parties with no third present must get something on day one. Contour died
-   processing 60–70 transactions a month.
-2. **A format and a rulebook, never a platform.** If one board meeting can shut it down, it will be.
-3. **The owner cannot be a participant.** TradeLens ran on a decentralised ledger and it made no
-   difference, because the *governance* was owned. Neutrality is a legal form, not a data structure.
-4. **Onboarding in an afternoon, without permission.** If it needs a consultant, the ceiling is a
-   few dozen participants.
-5. **Sealable by a qualified trust service.** Peer validation for correctness; a qualified
-   timestamp for legal weight. The record does not need to *be* qualified — it needs to be sealable
-   by something that is.
-6. **The ejection rule must be objective, published in advance, and checkable by anyone.**
-7. **Not W3C Verifiable Credentials.** The EU wallet's recognised formats are IETF SD-JWT VC and
-   ISO/IEC 18013-5 mdoc; the W3C data model "remains on the roadmap".
-8. **Extend what exists.** Chapter 16 already chains. Do not invent a parallel vocabulary.
-
-### The competition-law constraint
-
-The mechanism that makes this work is that rule-breakers are provably revoked and others stop
-relying on them. Read from a competition lawyer's chair: **a group of competitors operating a
-shared list of parties they collectively refuse to deal with is a concerted refusal to deal.**
-
-The precedent that makes it survivable is the certificate-authority ecosystem. Browsers do
-distrust and effectively kill non-compliant certificate authorities, and that is accepted, because
-the grounds are **objective, published in advance, and verifiable by anyone** — *you broke a
-stated technical rule*, not *we don't like you commercially*.
-
-Every evidence-bearing revocation ground in the implementation is checkable by any peer from the
-records alone, with no discretionary override. Two of them exist specifically to stop the rule
-firing on legitimate behaviour. See
-[`docs/TECHNICAL-REFERENCE.md`](docs/TECHNICAL-REFERENCE.md) §5.3.
-
-**This is a necessary condition, not a sufficient one.** The legal form and the rule design both
-need a competition lawyer.
-
----
-
-## What would kill this
-
-- **Recommendation #9 acquires an owner.** As of 1 September 2026 it has none, and the coalition
-  has published nothing in 2026 at all. If an OEM funds a registry and hands it over, the opening
-  closes. *Note the ambiguity honestly: an unowned recommendation in a coalition that has gone
-  quiet may mean nobody wants it, rather than that it is available.*
-- **A regulator names a system of record.** EASA's blockchain study concluded in September 2024
-  that regulators would need to issue guidelines first — they looked and stepped back. That could
-  change.
-- **An incumbent absorbs it.** The closest predecessor in the adjacent marine domain was selling
-  to shipowners in 2020 and was a component inside a testing lab's own product by late 2021. It
-  filed micro-entity accounts every year of its life, including the years it ran trials with
-  blue-chip names, and went to creditors' liquidation. **Blue-chip trials are not revenue.**
-- **The clock.** SWIFT 1973, the barcode 1974, PEPPOL around 2008. Ten to twenty years to critical
-  mass is the base rate. If this must work in five, the evidence says it will not.
-
----
-
-## Repository map
+## What is in here
 
 | Path | What it is |
 |---|---|
-| `SPEC.md` | The attestation format as a specification, independent of any implementation |
-| `profiles/aviation-back-to-birth.md` | The domain profile being built |
-| `profiles/bunker-sample-seal.md` | A second profile — better researched, not being built |
-| `docs/TECHNICAL-REFERENCE.md` | What the system enforces and where |
+| `SPEC.md` | The format, written so someone else could implement it |
+| `demo/` | The browser demo. The rules in TypeScript, no network |
+| `demo/zomes/` | The real implementation. Rust, on Holochain 0.7.0 |
+| `desktop/` | Electron app. Real conductor, real gossip, installable |
+| `profiles/` | How the format binds to a specific document type |
+| `docs/WHY.md` | Why this problem, why now, and what would kill it |
+| `docs/TECHNICAL-REFERENCE.md` | What the code enforces, and where |
 | `docs/HANDOVER.md` | For an engineer picking this up |
-| `docs/RESEARCH-ARCHIVE.md` | The research that chose aviation. Historical, unmaintained |
-| `docs/CODE-REVIEW-ARCHIVE.md` | Reviews of earlier drafts. Historical |
-| `demo/` | The RAF Workbench — the rules running in a browser. Has its own README |
-| `demo/zomes/` | The Holochain zome, with `BUILD.md` |
-| `docs/superseded-drafts/` | Earlier contributed drafts. Historical, do not build on them |
-| `LICENCE.md` | All rights reserved |
+| `LICENCE.md` | All rights reserved (see *Open questions*) |
+
+Three folders are historical and will mislead you about the current state.
+Do not start there: `docs/RESEARCH-ARCHIVE.md`, `docs/CODE-REVIEW-ARCHIVE.md`,
+`docs/superseded-drafts/`.
 
 ---
 
-## Status
+## What actually works
 
-**A working demonstration; an undecided venture.**
+Checked automatically on every push, against real Holochain binaries:
 
-### What exists and is checked on every push
+- The browser demo runs the rules end to end.
+- The Rust implementation compiles, installs into a conductor, and passes a full
+  test: approval granted, a non-approved issuer refused, a record signed, a
+  third party verifying it, and a revocation.
+- **Two independent nodes on one DHT.** An approval gossips from one node to the
+  other. A record is signed on the second node and verified on the first,
+  without the two signers ever contacting each other. A revocation on one node
+  flips the other node's answer to `currently_trusted: false` while
+  `historically_valid` stays true.
+- The TypeScript demo is pinned to the same verdicts the Rust zome produces, so
+  the two cannot drift apart silently.
 
-- A browser demo anyone can run in two commands.
-- A Holochain zome that compiles, packs, installs into a conductor, and passes an end-to-end test:
-  accreditation, refusal of a non-root, attestation, third-party verification, and revocation that
-  withdraws current trust while preserving historical validity.
-- **Two independent conductors on one DHT**, in CI: an accreditation gossiping from one node to the
-  other, a record authored on the second and verified on the first without the two signers ever
-  contacting each other, and a revocation on one node flipping the other's verdict to
-  `currently_trusted: false` while `historically_valid` stays true.
-- A conformance test holding the TypeScript engine to verdicts transcribed from the zome, with the
-  zome side asserted against a real conductor in CI.
-- CI running all of it against real Holochain binaries on every push.
+### What does not work yet
 
-### Settled
+- **Never run across two separate machines.** The two-node test runs two
+  conductors on one computer. Separate physical hosts, network splits and
+  hostile peers are all untested.
+- **No Android app.** Blocked on an unreleased Holochain library.
+- **The desktop app cannot revoke.** Only the browser demo can.
+- **No legal timestamp yet.** The format specifies one; nothing issues or checks
+  it. Until it does, a signer can back-date a record.
+- **Nothing checks a document against its fingerprint.** The fingerprint is
+  checked for shape only.
 
-- **The domain is aviation parts.** Marine bunker fuel was the alternative and is not being built;
-  the reasoning is in the archive and the profile is kept.
-- **Revocation, not ejection.** An accreditor withdrawing its own accreditation, not competitors
-  collectively refusing to deal.
-- **The trust anchor is set per deployment**, in the install call, not compiled into the build.
+`docs/TECHNICAL-REFERENCE.md` §8 lists every known limit, including several that
+are deliberately unfixed.
 
-### Open
+## What this deliberately does not do
 
-- **The name.** "Hallmark" and "Release Attestation Format" are both working titles.
-- **The licence.** ALL RIGHTS RESERVED. A specification needs a licence that permits independent
-  implementation; this needs deciding before anything is published externally.
-- **The legal form.** Foundation or co-operative, before it matters. You cannot be both a
-  participant and the registrar.
-- **Who holds root keys.** The code proves roots can be configured per deployment. It cannot tell
-  you whose keys belong there. This is the bootstrap problem, and it is a governance question.
+- **It cannot make a claim true.** A real person can sign a real record with a
+  real key and still be wrong. A record is not an inspection.
+- **It cannot fix old paperwork.** It helps parts entering service from now on.
+  Existing gaps stay gaps.
+- **It cannot decide who the root authorities are.** Someone has to say whose
+  keys count. That is a governance question, and no software answers it.
 
-### What still decides whether any of this matters
+## Open questions
 
-Code was never the hard part, and having some does not change these.
+- **The name.** "Hallmark" and "Release Attestation Format" are both working
+  titles, and the repo currently uses both.
+- **The licence.** All rights reserved today. A specification needs a licence
+  that lets other people implement it. This has to be settled before anything is
+  published outside the org.
+- **Who holds the root keys.** The code proves roots can be set per deployment.
+  It cannot tell you whose keys belong there.
 
-1. Get the coalition's September 2025 progress report and find out whether #9 has an owner.
-2. Get a lawyer's view on the anchoring pattern. If a peer-validated record plus a qualified
-   timestamp is not admissible, the approach needs rethinking.
-3. **Name two parties.** One repair shop and one buyer. If you cannot name them, the N=2 test has
-   already failed.
+---
 
-The demonstration exists so those conversations have something to point at. It is not a substitute
-for having them. If the effort on this project is 80% engineering, it matches the profile of every
-corpse in the archive.
+**Why aviation, why now, and the three things that would kill this project:**
+**[docs/WHY.md](docs/WHY.md)**.

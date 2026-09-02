@@ -25,7 +25,8 @@ The rules are running in the browser. The Rust they mirror is readable in-app un
 
 | Path | What it is |
 |---|---|
-| `README.md` | The problem, the constraints that follow from it, and what would kill the project |
+| `README.md` | What the project is, what works today, and what does not. Start here |
+| `docs/WHY.md` | Why aviation, the design constraints that follow, and what would kill the project |
 | `SPEC.md` | The attestation format as a specification, independent of this implementation |
 | `profiles/aviation-back-to-birth.md` | The domain profile being built. Start here for domain context |
 | `profiles/bunker-sample-seal.md` | A second profile, better researched but not being built |
