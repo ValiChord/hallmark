@@ -16,10 +16,35 @@ has to stay alive for a record to remain checkable.
 cd demo && npm install && npm run dev
 ```
 
-Load the sample network, run **Inspect, then overhaul**, then **Conflicting inspection**, and
-watch the Verify tab. What you are looking for is a report reading **Not currently trusted** beside
-**Historically valid** — the attestation was good when it was signed, and the accreditation behind
-it has since been withdrawn. Two separate facts, which is the entire argument.
+Press **Load sample**, then work through the **Walkthrough** tab. Five steps: a part is made, a
+repair station works on it and records what it did *not* check, someone relies on that, the shop
+loses its approval, and a stranger checks the paperwork years later. It ends on two answers —
+**Historically valid: yes. Currently trusted: no.**
+
+That pair is the entire argument. The attestation was good when it was signed and stays a real
+document; what it no longer supports is *new* reliance. Almost every system collapses those into
+one word.
+
+---
+
+## Two kinds of claim in this repository
+
+Worth separating, because they carry different weight and one of them you can check yourself in
+five minutes.
+
+**What the demonstration proves.** The rules run, and you can watch them refuse things. An
+accreditation chain is walked to a root; a term from the wrong side of the form is rejected; a
+revocation withdraws current trust without touching history; a third party verifies a record
+without contacting whoever signed it — across two machines, in CI, on every push. None of that
+depends on agreeing with anything below.
+
+**What the project proposes.** That the industry has a gap here, that it is the gap described in
+the next section, and that a portable format with an explicit joining rule is a reasonable answer
+to it. That is a proposition supported by published sources, not a demonstrated fact — and the
+right response to it is for someone who works in the industry to say whether it matches what they
+see.
+
+If the second turns out to be wrong, the first is still true. It just would not matter.
 
 ---
 

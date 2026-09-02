@@ -8,7 +8,7 @@ import {
 } from "./engine";
 import { RAF_VERSION, type Attestation } from "./types";
 
-function digest(label: string): string {
+export function digest(label: string): string {
   return `sha256:${label.padEnd(24, "0").slice(0, 24)}`;
 }
 
@@ -133,7 +133,10 @@ export function sampleOverhaul(state: EngineState, predecessorHash: string): Att
     },
     scope: {
       observed: [{ assertionId: "OVERHAULED", value: { kind: "Bool", value: true } }],
-      notObserved: ["PROTOTYPE"],
+      // A return-to-service record may only use AC 43-9D Table B-1 terms. This
+      // said PROTOTYPE, which is an airworthiness term, and the path split now
+      // rejects it — correctly, and it broke this scenario until 2026-09-02.
+      notObserved: ["MODIFIED"],
     },
     evidence: [{ evidenceType: "shop_traveler", digest: digest("traveler-0208") }],
   };

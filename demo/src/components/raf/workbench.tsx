@@ -26,6 +26,7 @@ import {
   type EngineState,
 } from "@/lib/raf/engine";
 import { runHappyPath, sampleConflict, sampleInspect } from "@/lib/raf/demo";
+import { STEPS, walkthroughReport, type Ctx, type StepResult } from "@/lib/raf/walkthrough";
 import { useRaf } from "@/lib/raf/store";
 import {
   ACCREDITATION_TYPES,
@@ -48,9 +49,10 @@ import {
 } from "@/lib/raf/types";
 import { verifyAttestation, type VerificationReport } from "@/lib/raf/verify";
 
-type Tab = "issue" | "attest" | "revoke" | "verify" | "ledger";
+type Tab = "story" | "issue" | "attest" | "revoke" | "verify" | "ledger";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "story", label: "Walkthrough" },
   { id: "issue", label: "Issue" },
   { id: "attest", label: "Attest" },
   { id: "revoke", label: "Revoke" },
@@ -70,6 +72,8 @@ const RETURN_TO_SERVICE_STATUS = RETURN_TO_SERVICE_VOCABULARY;
 
 /** One plain sentence per tab. Nobody should have to guess what a screen is for. */
 const TAB_BLURBS: Record<Tab, string> = {
+  story:
+    "The whole argument in five steps: a part is made, someone works on it and records what they did not check, someone relies on that, the shop loses its approval, and a stranger checks the paperwork years later.",
   issue:
     "Grant an accreditation, with an expiry date. Nobody can sign anything without one, and only a root authority or an OEM can hand them out.",
   attest:
@@ -93,7 +97,7 @@ export function Workbench() {
   const mutate = useRaf((s) => s.mutate);
   const seed = useRaf((s) => s.seed);
   const reset = useRaf((s) => s.reset);
-  const [tab, setTab] = useState<Tab>("attest");
+  const [tab, setTab] = useState<Tab>("story");
   const [banner, setBanner] = useState<string | null>(null);
   const [bannerOk, setBannerOk] = useState(true);
   const [hydrated, setHydrated] = useState(false);
@@ -415,6 +419,7 @@ export function Workbench() {
             {TAB_BLURBS[tab]}
           </p>
 
+          {tab === "story" ? <Walkthrough /> : null}
           {tab === "issue" && actor ? (
             <IssueForm
               state={dht}
@@ -1182,6 +1187,167 @@ function Ledger({ state }: { state: EngineState }) {
               ))}
           </ul>
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The whole argument, run as one sequence.
+ *
+ * The other tabs are a toolbox — good for poking at the rules once you know
+ * what you are looking at. But the thing this format exists to show, that a
+ * certificate stays a real document after its signer loses authority, could
+ * only be seen by assembling it yourself across four tabs. Almost nobody did.
+ */
+function Walkthrough() {
+  const dht = useRaf((s) => s.dht);
+  const mutate = useRaf((s) => s.mutate);
+  const seed = useRaf((s) => s.seed);
+  const [at, setAt] = useState(0);
+  const [results, setResults] = useState<Record<string, StepResult>>({});
+  const [ctx, setCtx] = useState<Ctx>({});
+
+  const done = at >= STEPS.length;
+  const finalReport = done ? walkthroughReport(dht, ctx) : null;
+
+  function runNext() {
+    const step = STEPS[at];
+    if (!step) return;
+    const nextCtx: Ctx = { ...ctx };
+    let result: StepResult = { ok: false, detail: "no-op" };
+    mutate((s) => {
+      result = step.run(s, nextCtx);
+    });
+    setResults((r) => ({ ...r, [step.id]: result }));
+    setCtx(nextCtx);
+    if (result.ok) setAt((i) => i + 1);
+  }
+
+  function restart() {
+    seed();
+    setAt(0);
+    setResults({});
+    setCtx({});
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <section className="rounded-xl bg-surface p-5 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          <span className="text-fg">
+            One part, five years, four organisations, and a question at the end.
+          </span>{" "}
+          Every step below runs the real rules — the same ones the Holochain zome enforces. Nothing
+          is staged, and a step that broke the rules would be refused in front of you.
+        </p>
+      </section>
+
+      {STEPS.map((step, i) => {
+        const result = results[step.id];
+        const active = i === at;
+        const past = i < at;
+        return (
+          <section
+            key={step.id}
+            className={cn(
+              "rounded-xl p-5 shadow-[0_0_0_1px_rgba(232,230,225,0.08)]",
+              active ? "bg-surface" : past ? "bg-surface/60" : "bg-surface/30",
+            )}
+          >
+            <div className="flex items-baseline gap-3">
+              <span className="font-mono text-[11px] tracking-[0.18em] text-primary">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3
+                className={cn("text-base font-medium", !active && !past && "text-muted-foreground")}
+              >
+                {step.title}
+              </h3>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              {step.premise}
+            </p>
+
+            {result ? (
+              <p
+                className={cn(
+                  "mt-3 max-w-2xl rounded-lg px-4 py-3 text-sm leading-relaxed",
+                  result.ok ? "bg-ok/10 text-fg" : "bg-danger/10 text-danger",
+                )}
+              >
+                {result.detail}
+                {result.hash ? (
+                  <span className="mt-1 block font-mono text-xs text-muted-foreground">
+                    {result.hash}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+
+            {active ? (
+              <Button className="mt-4" onClick={runNext}>
+                {i === 0 ? "Start" : "Next step"}
+                <ChevronRight />
+              </Button>
+            ) : null}
+          </section>
+        );
+      })}
+
+      {done && finalReport ? (
+        <section className="rounded-xl bg-surface p-6 shadow-[0_0_0_1px_rgba(158,207,160,0.35)]">
+          <h3 className="text-lg font-medium">The two answers</h3>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Almost every system collapses these into one word, and that is the mistake.
+          </p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg bg-bg p-4">
+              <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+                Historically valid
+              </p>
+              <p
+                className={cn(
+                  "mt-1 text-2xl font-medium",
+                  finalReport.historicallyValid ? "text-ok" : "text-danger",
+                )}
+              >
+                {finalReport.historicallyValid ? "Yes" : "No"}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                It was signed while AeroFix genuinely held the approval. Withdrawing that approval
+                later does not reach back and turn an honest document into a forgery.
+              </p>
+            </div>
+            <div className="rounded-lg bg-bg p-4">
+              <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+                Currently trusted
+              </p>
+              <p
+                className={cn(
+                  "mt-1 text-2xl font-medium",
+                  finalReport.currentlyTrusted ? "text-ok" : "text-danger",
+                )}
+              >
+                {finalReport.currentlyTrusted ? "Yes" : "No"}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                But you should not lean on it for something new. The approval behind it is gone, and
+                a reader today needs to know that.
+              </p>
+            </div>
+          </div>
+          <p className="mt-5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            <span className="text-fg">And nothing was rewritten to achieve it.</span> The revocation
+            is its own record; the attestation is untouched. Open the{" "}
+            <span className="text-fg">Ledger</span> to see every record in the order it was written,
+            including anything that was refused.
+          </p>
+          <Button variant="outline" className="mt-4" onClick={restart}>
+            <RotateCcw />
+            Run it again
+          </Button>
+        </section>
       ) : null}
     </div>
   );

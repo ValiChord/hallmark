@@ -50,8 +50,36 @@ npm run build:webhapp
 npm run dev
 ```
 
-`npm run build:win` produces an installer. macOS and Linux targets exist too;
-none of them are code-signed, so expect an OS warning on first run.
+`npm run build:win` produces an installer. macOS and Linux targets exist too.
+
+## Installing it: the warning you will get
+
+None of the builds are code-signed, so **Windows blocks the installer on first
+run**. You will see *"Windows protected your PC"* with only a **Don't run**
+button visible.
+
+1. Click **More info** — a small link, easy to miss.
+2. A **Run anyway** button appears. Click it.
+
+This is not SmartScreen detecting anything. It is saying that nobody has paid a
+certificate authority to vouch for the publisher, which is true. **Every person
+you hand this to will see it**, so factor it into any demonstration rather than
+being surprised by it.
+
+Because there is no signature to check, verify the file by its hash instead. The
+value is published with each release:
+
+```powershell
+Get-FileHash .\uk.valichord.hallmark-0.1.0-setup.exe -Algorithm SHA256
+```
+
+Antivirus software may object separately, with its own dialog and its own
+*Allow* button.
+
+**Making the warning go away** costs roughly £250–400 a year for an EV
+code-signing certificate, and even then Windows takes time to build reputation
+for a new publisher. Fine to defer while demonstrating to people in a room; not
+fine if a company's IT department is ever expected to deploy it.
 
 ---
 
