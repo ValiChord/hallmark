@@ -233,17 +233,88 @@ rule design both need a competition lawyer.
 
   *Note the ambiguity honestly: an unowned recommendation in a coalition that
   has gone quiet may mean nobody wants it, rather than that it is available.*
-- **A regulator names a system of record.** EASA's blockchain study concluded in
-  September 2024 that regulators would need to issue guidelines first — they
-  looked and stepped back. That could change.
-- **An incumbent absorbs it.** The closest predecessor in the adjacent marine
-  domain was selling to shipowners in 2020 and was a component inside a testing
-  lab's own product by late 2021. It filed micro-entity accounts every year of
-  its life, including the years it ran trials with blue-chip names, and went to
-  creditors' liquidation. **Blue-chip trials are not revenue.**
-- **The clock.** SWIFT 1973, the barcode 1974, PEPPOL around 2008. Ten to twenty
-  years to critical mass is the base rate. If this must work in five, the
-  evidence says it will not.
+- **A regulator names a system of record. ⚠️ Re-tested 2 September 2026 and it
+  was understated.** The earlier wording said EASA "looked and stepped back".
+  That is not supported.
+
+  What is verified: EASA ran **VIRTUA** (*Digital Transformation — Case Studies
+  for Aviation Safety Standards — Virtualisation*), Horizon Europe funded, with
+  FPT Software, IATA, **SkyThread** and PwC France. It concluded **September
+  2024**. Its own deliverable D-1.1 states the project shall assess "the main
+  changes to be introduced in regulations, standards and working processes as
+  well as the preparation of guidelines and supporting materials for regulatory
+  evolutions and the deployment of the related solutions."
+
+  So EASA commissioned exactly the guideline work this kill condition treats as
+  the precondition, and did it with a named consortium that includes a working
+  vendor. **No public final report or resulting guidance has been found**, two
+  years on. Read that as unresolved, not as retreat — "they stepped back" was an
+  inference from silence and should not have been written as a finding.
+  *Source: [EASA D-1.1](https://www.easa.europa.eu/en/downloads/137888/en),
+  read in full.*
+
+- **An incumbent absorbs it. ⚠️ Re-tested 2 September 2026: real, and it was
+  being argued from the wrong industry.** The earlier wording reached for a
+  marine predecessor because no aviation graveyard research existed. There is
+  aviation evidence, and it is closer to home:
+
+  - **Aerotrax was acquired by LGM Aviation on 17 July 2024.** Absorption, in
+    this domain, recently.
+  - **SkyThread is live, not hypothetical.** AFI KLM E&M and Parker Aerospace
+    deployed its blockchain-based parts track-and-trace across a 787 fleet,
+    reported at hundreds of thousands of parts. The same company sits inside
+    EASA's VIRTUA consortium.
+
+  The marine lesson still holds and is worth keeping: that predecessor filed
+  micro-entity accounts every year of its life, including the years it ran
+  trials with blue-chip names, and went to creditors' liquidation. **Blue-chip
+  trials are not revenue.**
+
+  **The blue-team reading, which matters as much.** SkyThread is an
+  operator-run platform deployed in a consortium — one MRO, one supplier, one
+  fleet. That is precisely where this document argues platforms *do* work, and
+  it is not the neutral industry-wide trust list #4 asks for. But it does
+  disprove the absolute form of "nobody can own this": someone is operating,
+  customers are buying, and a regulator is sitting at the table with them.
+  Anyone pitching this project should expect to be asked "why not SkyThread?"
+  and should have an answer better than architecture.
+
+- **The clock. ⚠️ Re-tested 2 September 2026: it contradicts this project's own
+  first design constraint.** The dates are about right — SWIFT 1973, the barcode
+  1974, PEPPOL around 2008 — and ten to twenty years to critical mass is a fair
+  base rate *for a network standard that is only useful once nearly everyone has
+  adopted it.*
+
+  Hallmark is explicitly not that. **Design constraint #1 is value at N=2**: two
+  parties, no third present, get something on day one. If that constraint holds,
+  time-to-ubiquity is the wrong yardstick, because usefulness does not wait for
+  it. If it does not hold, the problem is constraint #1, not the calendar.
+
+  Either way this is not a kill condition as written. **The real version of the
+  risk is commercial, not adoption-curve:** can two parties be found who will
+  use it this year, and will anyone pay for it before ubiquity arrives? That is
+  the N=2 test already at the foot of this document, and it is the one to keep.
+
+### ⚠️ Unread prior art: ATA Spec 42
+
+Surfaced by EASA's own literature review and **not previously considered here**.
+*Spec 42, Aviation Industry Standards for Digital Information Security*, is
+described as providing standardised methods for security and specifically for
+"the electronic exchange of digital certificates".
+
+That is adjacent to this project's layer and might overlap it. Nobody here has
+read it — like Chapter 16 it is gated behind ATA e-Business membership.
+
+The likely distinction, stated as expectation rather than fact: a public-key
+infrastructure establishes that a key really belongs to a named organisation.
+It does not establish that the organisation held a Part-145 approval on the day
+it signed, nor that the approval was not later withdrawn — revoking a *key* and
+withdrawing an *approval* are different acts. A PKI also needs a certificate
+authority, which is the operator problem again.
+
+**Treat this as an open question, not a settled difference.** It is the
+strongest technical objection available to a sceptic, and reading Spec 42 is the
+cheapest way to find out whether it is fatal.
 
 ---
 
