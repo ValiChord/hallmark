@@ -128,13 +128,39 @@ wire-compatible across a major DHT revision.
 An Android build must be given the same seed and the same properties by hand —
 it has no idea what this app's product name or version is.
 
-**One caveat to verify before relying on it.** Holochain documentation describes
-mobile nodes running in a "zero-arc" configuration, meaning they do not hold a
-shard of the DHT — good for battery and app-store rules, but it means phones
-publish and read without storing. If that is accurate, a phones-only network has
-nowhere to keep records, and **at least one desktop node must stay running** for
-anything to persist. Confirm this against the runtime's own docs before a
-demonstration; it is the difference between a working demo and an empty one.
+### Who has to be online for records to survive
+
+**Confirmed 2026-09-01.** `templates/conductor-config.yaml` sets
+`target_arc_factor: 1` — full arc. Full arc is replication, not sharding: every
+node stores a complete copy of the DHT. So **one running node is enough** to
+serve everything, not all of them.
+
+Separate the two things that get conflated here:
+
+- **Availability.** A node that is off cannot serve records. Nothing is deleted;
+  it is simply unreachable until something holding a copy comes back.
+- **Durability.** Each conductor persists its store to disk. Records are lost
+  only when every device holding a copy is wiped, uninstalled, or has its data
+  directory deleted. All nodes being off at once loses nothing.
+
+Full arc is a *target*, not an instant guarantee — a node only holds what it has
+actually received. Let devices sync before taking one offline.
+
+**Mobile defaults to zero arc, and that changes the answer.** From Holochain's
+own blog: mobile nodes "are full DHT peers but don't contribute to the storage of
+other peers' data", with the suggestion to "establish a cultural practice of
+asking people to leave their computer running so their peers can still get data".
+Two zero-arc phones with the desktop off means neither can read the other's
+records, even though both are running.
+
+That is a configuration choice rather than a limitation — `target_arc_factor` is
+a number, and phones can be set to full arc. The reasons not to (battery,
+storage, app-store rules) do not apply to a demonstration on spare handsets.
+
+**For a three-device demonstration, run all three at full arc.** Then the
+demonstration worth doing is available: sign on phone A, shut phone A *and* the
+desktop down, and verify on phone B. Nobody the verifier could contact is
+running, and the record still checks out.
 
 ### What this does not solve
 
