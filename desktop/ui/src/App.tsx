@@ -18,6 +18,8 @@ type HallmarkBridge = {
   setNetworkKey(key: string): Promise<boolean>;
   getPeerInfo(): Promise<string>;
   addPeerInfo(encoded: string): Promise<number>;
+  getServers(): Promise<{ bootstrapUrl: string; relayUrl: string; isDefault: boolean }>;
+  setServers(bootstrapUrl?: string, relayUrl?: string): Promise<boolean>;
 };
 const bridge = (): HallmarkBridge | undefined =>
   (window as unknown as { __HALLMARK__?: HallmarkBridge }).__HALLMARK__;
@@ -247,8 +249,10 @@ function NetworkPanel({ setBanner }: { setBanner: (b: Banner) => void }) {
         </button>
       </div>
 
+      <ServersCard setBanner={setBanner} />
+
       <div className="card">
-        <h2>2. Introduce your devices</h2>
+        <h2>3. Introduce your devices</h2>
         <p className="lede small" style={{ marginBottom: 12 }}>
           Same network is not the same as <em>having found each other</em>. Swap the text below
           between devices — each end pastes the other's — and they connect directly, with no
@@ -299,6 +303,86 @@ function NetworkPanel({ setBanner }: { setBanner: (b: Banner) => void }) {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * Where this device looks for peers, and how it reaches them.
+ *
+ * Not part of the network's identity — these are conductor settings, so two
+ * devices can use different servers and still be on the same network. What they
+ * cannot do is find each other without *some* server in common, and a node's
+ * address is itself a path on the relay, so a reachable relay is required even
+ * when peers are introduced by hand.
+ */
+function ServersCard({ setBanner }: { setBanner: (b: Banner) => void }) {
+  const api = bridge()!;
+  const [bootstrap, setBootstrap] = useState("");
+  const [relay, setRelay] = useState("");
+  const [isDefault, setIsDefault] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .getServers()
+      .then((s) => {
+        setBootstrap(s.bootstrapUrl);
+        setRelay(s.relayUrl);
+        setIsDefault(s.isDefault);
+      })
+      .catch(() => undefined);
+  }, [api]);
+
+  const save = async (b?: string, r?: string) => {
+    setBusy(true);
+    try {
+      await api.setServers(b, r);
+      const s = await api.getServers();
+      setBootstrap(s.bootstrapUrl);
+      setRelay(s.relayUrl);
+      setIsDefault(s.isDefault);
+      setBanner({ ok: true, text: "Saved. Close and reopen the app to use it." });
+    } catch (e) {
+      setBanner({ ok: false, text: reason(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2>2. Where to find peers</h2>
+      <p className="lede small" style={{ marginBottom: 12 }}>
+        <strong>Bootstrap</strong> answers "who is out there". <strong>Relay</strong> answers "how
+        do I reach them" — and a device's address is a path on the relay, so it is needed even when
+        you introduce devices by hand. Neither can read your records or grant anyone authority.
+      </p>
+      <p className="lede small" style={{ marginBottom: 14 }}>
+        {isDefault
+          ? "Currently using the public servers this build shipped with."
+          : "Currently using servers you configured."}{" "}
+        Point these at a machine on your own network to depend on nobody — and to sidestep antivirus
+        software that intercepts encrypted connections.
+      </p>
+      <label>
+        <span>Bootstrap server</span>
+        <input value={bootstrap} onChange={(e) => setBootstrap(e.target.value)} />
+      </label>
+      <label>
+        <span>Relay server</span>
+        <input value={relay} onChange={(e) => setRelay(e.target.value)} />
+      </label>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button className="action" disabled={busy} onClick={() => void save(bootstrap, relay)}>
+          Save
+        </button>
+        {!isDefault ? (
+          <button className="ghost" disabled={busy} onClick={() => void save(undefined, undefined)}>
+            Back to the defaults
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

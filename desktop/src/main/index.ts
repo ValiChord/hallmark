@@ -32,6 +32,7 @@ import { HolochainManager } from './holochainManager';
 import {
   readNetworkConfig,
   writeNetworkConfig,
+  writeServerUrls,
   type NetworkProperties,
 } from './networkConfig';
 import { createSplashWindow } from './windows';
@@ -275,6 +276,30 @@ app.whenReady().then(async () => {
     writeNetworkConfig(KANGAROO_FILESYSTEM, properties as NetworkProperties);
     // The DNA hash is derived from these, so the app has to reinstall onto the
     // new network. It does that on next launch, keeping this agent key.
+    return true;
+  });
+
+  ipcMain.handle('servers-get', () => {
+    const cfg = readNetworkConfig(KANGAROO_FILESYSTEM);
+    return {
+      bootstrapUrl: cfg.bootstrapUrl ?? KANGAROO_CONFIG.bootstrapUrl,
+      relayUrl: cfg.relayUrl ?? KANGAROO_CONFIG.relayUrl,
+      isDefault: !cfg.bootstrapUrl && !cfg.relayUrl,
+    };
+  });
+
+  ipcMain.handle('servers-set', (_e, bootstrapUrl?: string, relayUrl?: string) => {
+    const clean = (u?: string) => {
+      const t = u?.trim();
+      if (!t) return undefined;
+      try {
+        new URL(t);
+      } catch {
+        throw new Error(`Not a valid URL: ${t}`);
+      }
+      return t;
+    };
+    writeServerUrls(KANGAROO_FILESYSTEM, clean(bootstrapUrl), clean(relayUrl));
     return true;
   });
 

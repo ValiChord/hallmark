@@ -4,6 +4,7 @@ import { KangarooEmitter } from './eventEmitter';
 import { KangarooFileSystem } from './filesystem';
 import { PasswordType } from './types';
 import { RunOptions } from './cli';
+import { readNetworkConfig } from './networkConfig';
 import { initializeLairKeystore, launchLairKeystore } from './lairKeystore';
 import {
   HAPP_APP_ID,
@@ -80,8 +81,19 @@ export async function launch(
     kangarooFs.conductorDir,
     kangarooFs.conductorConfigPath,
     lairUrl,
-    runOptions.bootstrapUrl ? runOptions.bootstrapUrl.toString() : KANGAROO_CONFIG.bootstrapUrl,
-    runOptions.relayUrl ? runOptions.relayUrl.toString() : KANGAROO_CONFIG.relayUrl,
+    // Precedence: CLI flag, then network.json, then the build's default.
+    //
+    // These are conductor configuration, not DNA modifiers, so they are *not*
+    // part of the DNA hash — two devices can reach each other through different
+    // servers and still be on the same network. They are kept in network.json
+    // beside the roots so a deployment can point at its own infrastructure
+    // without a rebuild.
+    runOptions.bootstrapUrl?.toString() ??
+      readNetworkConfig(kangarooFs).bootstrapUrl ??
+      KANGAROO_CONFIG.bootstrapUrl,
+    runOptions.relayUrl?.toString() ??
+      readNetworkConfig(kangarooFs).relayUrl ??
+      KANGAROO_CONFIG.relayUrl,
     runOptions.holochainRustLog,
     runOptions.holochainWasmLog
   );

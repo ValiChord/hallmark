@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('__HALLMARK__', {
   /** Join someone else's network. Takes effect on the next launch. */
   setNetworkKey: (key: string): Promise<boolean> =>
     ipcRenderer.invoke('network-key-set', key),
+  /** Which bootstrap and relay servers this device uses. */
+  getServers: (): Promise<{ bootstrapUrl: string; relayUrl: string; isDefault: boolean }> =>
+    ipcRenderer.invoke('servers-get'),
+  /** Point at different servers - e.g. one you run yourself. Applies on relaunch. */
+  setServers: (bootstrapUrl?: string, relayUrl?: string): Promise<boolean> =>
+    ipcRenderer.invoke('servers-set', bootstrapUrl, relayUrl),
   /** Where this device is on the wire. Signed with a 20-minute expiry. */
   getPeerInfo: (): Promise<string> => ipcRenderer.invoke('peer-info-get'),
   /** Introduce this device to another one. */
