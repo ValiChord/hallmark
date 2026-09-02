@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { decodeHashFromBase64 } from "@holochain/client";
 import QRCode from "qrcode";
+import { Demonstration } from "./Demonstration";
 import { call, connect, recordEntry, recordHash, b64, type NodeInfo } from "./hc";
 
-type Tab = "node" | "network" | "accredit" | "attest" | "verify";
+type Tab = "demo" | "node" | "network" | "accredit" | "attest" | "verify";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "demo", label: "Demonstration" },
   { id: "node", label: "This node" },
   { id: "network", label: "Network" },
   { id: "accredit", label: "Accredit" },
@@ -43,7 +45,7 @@ function reason(e: unknown): string {
 export function App() {
   const [node, setNode] = useState<NodeInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("node");
+  const [tab, setTab] = useState<Tab>("demo");
   const [banner, setBanner] = useState<Banner>(null);
 
   useEffect(() => {
@@ -96,6 +98,7 @@ export function App() {
         <div className={`banner ${banner.ok ? "ok" : "err"}`}>{banner.text}</div>
       ) : null}
 
+      {tab === "demo" ? <Demonstration node={node} /> : null}
       {tab === "node" ? <NodePanel node={node} /> : null}
       {tab === "network" ? <NetworkPanel setBanner={setBanner} /> : null}
       {tab === "accredit" ? <Accredit node={node} setBanner={setBanner} /> : null}

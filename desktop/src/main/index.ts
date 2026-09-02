@@ -12,6 +12,8 @@ import {
   Event,
 } from 'electron';
 import childProcess from 'child_process';
+import fs from 'fs';
+import path from 'path';
 import { ZomeCallSigner } from '@holochain/hc-spin-rust-utils';
 import contextMenu from 'electron-context-menu';
 import { encode } from '@msgpack/msgpack';
@@ -21,6 +23,7 @@ import {
   CallZomeRequestSigned,
   getNonceExpiration,
   randomNonce,
+  encodeHashToBase64,
 } from '@holochain/client';
 import { Command } from 'commander';
 import semver from 'semver';
@@ -277,6 +280,43 @@ app.whenReady().then(async () => {
     // The DNA hash is derived from these, so the app has to reinstall onto the
     // new network. It does that on next launch, keeping this agent key.
     return true;
+  });
+
+  /**
+   * Where this node actually stands, for the guided demonstration.
+   *
+   * Every value is read from the conductor or from disk. Nothing is remembered
+   * about what the user "has done" — a checklist that trusts its own memory
+   * will happily tell you a step succeeded when the conductor disagrees.
+   */
+  ipcMain.handle('node-status', async () => {
+    const cfg = readNetworkConfig(KANGAROO_FILESYSTEM);
+    const keyPath = path.join(KANGAROO_FILESYSTEM.profileDataDir, 'agent.key');
+    let agentB64: string | undefined;
+    if (fs.existsSync(keyPath)) {
+      const bytes = new Uint8Array(JSON.parse(fs.readFileSync(keyPath, 'utf-8')));
+      agentB64 = encodeHashToBase64(bytes);
+    }
+
+    // agentInfo includes this node's own entry, so anything above one means we
+    // have actually heard of somebody else.
+    let peerCount = 0;
+    if (HOLOCHAIN_MANAGER) {
+      try {
+        const infos = await HOLOCHAIN_MANAGER.adminWebsocket.agentInfo({ dna_hashes: null });
+        peerCount = Math.max(0, infos.length - 1);
+      } catch {
+        peerCount = 0;
+      }
+    }
+
+    return {
+      agentB64,
+      isRoot: agentB64 ? cfg.properties.initial_members.includes(agentB64) : false,
+      rootCount: cfg.properties.initial_members.length,
+      peerCount,
+      usingOwnServers: !!cfg.bootstrapUrl || !!cfg.relayUrl,
+    };
   });
 
   ipcMain.handle('servers-get', () => {

@@ -21,6 +21,14 @@ contextBridge.exposeInMainWorld('__HALLMARK__', {
   /** Join someone else's network. Takes effect on the next launch. */
   setNetworkKey: (key: string): Promise<boolean> =>
     ipcRenderer.invoke('network-key-set', key),
+  /** Where this node stands: root or not, how many peers it knows. Read live. */
+  nodeStatus: (): Promise<{
+    agentB64?: string;
+    isRoot: boolean;
+    rootCount: number;
+    peerCount: number;
+    usingOwnServers: boolean;
+  }> => ipcRenderer.invoke('node-status'),
   /** Which bootstrap and relay servers this device uses. */
   getServers: (): Promise<{ bootstrapUrl: string; relayUrl: string; isDefault: boolean }> =>
     ipcRenderer.invoke('servers-get'),
