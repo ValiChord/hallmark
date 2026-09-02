@@ -185,6 +185,13 @@ jobs:
         working-directory: demo
         run: node zomes/tests/conductor-smoke.mjs
 
+      # The desktop Revoke tab reads membership and revocation entries by field
+      # name. Those names are a contract with the integrity zome, and nothing
+      # else would notice if they changed.
+      - name: The desktop Revoke tab's contract with the zome
+        working-directory: demo
+        run: node zomes/tests/revoke-ui-contract.mjs
+
       - name: Conductor log on failure
         if: failure()
         working-directory: demo/zomes
