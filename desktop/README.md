@@ -257,6 +257,47 @@ $s.AuthenticateAsClient('dev-test-bootstrap2.holochain.org')
 If the issuer is a real CA, networking is fine. If it names your antivirus, it
 is not.
 
+## Running your own network (recommended for demonstrations)
+
+**Verified working 2026-09-02**, on a machine whose TLS is intercepted by
+antivirus — which is what made it necessary.
+
+Kitsune2's `bootstrap_srv` provides bootstrap *and* relay in one process. Run it
+over plain HTTP on your LAN and you depend on nobody, and there is no TLS for
+antivirus software to break.
+
+```bash
+# once — match Holochain 0.7.0's dependency, which is 0.5.x
+cargo install kitsune2_bootstrap_srv --version 0.5.1
+
+npm run network
+```
+
+It prints a URL such as `http://192.168.1.89:8888`. Put that in **both** fields —
+bootstrap and relay — on every device's Network tab, then relaunch each app.
+Phones must be on the same wifi.
+
+Holochain refuses a plaintext relay by default: the conductor fails to start with
+`Disallowed plaintext relay URL`. The app sets `relayAllowPlainText` for you when
+the relay URL begins `http://`, on the grounds that asking for a plaintext relay
+is already the decision. The flag lives at
+`network.advanced.irohTransport.relayAllowPlainText`.
+
+Two desktop instances against a local server — the whole path, with the public
+internet still intercepted by antivirus:
+
+```
+PASS  same DNA hash — identical rules
+PASS  introduced directly — peer info swapped both ways, no bootstrap server
+PASS  A accredited B
+PASS  the accreditation reached B by gossip
+PASS  B signed an attestation under A's accreditation
+PASS  A verified B's attestation without contacting B
+```
+
+Reproduce it with `scripts/two-node-check.mjs` — see *Verifying two nodes
+locally* below.
+
 ## Bootstrap and relay are two dependencies, not one
 
 Easy to conflate, and getting it wrong sends you down the wrong fix. Measured on

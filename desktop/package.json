@@ -22,7 +22,8 @@
     "build:linux": "yarn build && electron-builder --linux --config",
     "lint": "eslint .",
     "build:ui": "npm --prefix ui run build",
-    "build:webhapp": "node scripts/build-webhapp.mjs"
+    "build:webhapp": "node scripts/build-webhapp.mjs",
+    "network": "node scripts/local-network.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

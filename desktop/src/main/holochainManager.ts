@@ -95,6 +95,26 @@ export class HolochainManager {
       : KANGAROO_CONFIG.bootstrapUrl;
     conductorConfig.network.relay_url = relayUrl ? relayUrl : KANGAROO_CONFIG.relayUrl;
 
+    // A relay reached over plain HTTP is refused by default — kitsune2's iroh
+    // transport returns "Disallowed plaintext relay URL" and the conductor
+    // fails to start. That default is right for the public internet and wrong
+    // for a LAN, where running your own server over http:// is the point: there
+    // is no TLS to be intercepted, and no third party in the path.
+    //
+    // So the flag follows the URL rather than being a setting of its own. Ask
+    // for an http:// relay and you have already made the decision.
+    const relayInUse = String(conductorConfig.network.relay_url ?? '');
+    if (relayInUse.startsWith('http://')) {
+      conductorConfig.network.advanced = {
+        ...(conductorConfig.network.advanced ?? {}),
+        irohTransport: {
+          ...(conductorConfig.network.advanced?.irohTransport ?? {}),
+          relayAllowPlainText: true,
+        },
+      };
+      console.log('Relay is plaintext http:// — enabling relayAllowPlainText.');
+    }
+
     console.log('Writing conductor-config.yaml...');
 
     fs.writeFileSync(configPath, yaml.dump(conductorConfig));
