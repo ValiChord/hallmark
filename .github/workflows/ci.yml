@@ -101,7 +101,7 @@ jobs:
             sleep 2
           done
           curl -sf -o page.html http://127.0.0.1:8099/ || { echo "server did not serve"; cat boot.log; exit 1; }
-          grep -q "RAF Workbench" page.html || { echo "unexpected page content"; head -c 400 page.html; exit 1; }
+          grep -q "Hallmark" page.html || { echo "unexpected page content"; head -c 400 page.html; exit 1; }
           grep -qi "sign in" page.html && { echo "AUTH IS ON — visitors would hit a login wall"; exit 1; }
           echo "served the workbench with no sign-in"
 

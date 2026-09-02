@@ -1,4 +1,4 @@
-# Release Attestation Format — draft v0.1
+# Hallmark — the attestation format, draft v0.1
 
 A format for saying **who was entitled to sign a release certificate, and exactly what they
 claimed**, in a way a stranger can check years later without contacting anyone.

@@ -1,4 +1,4 @@
-# Aviation provenance zomes (RAF 0.1)
+# Aviation provenance zomes (Hallmark 0.1)
 
 Holochain **0.7** integrity + coordinator split. Integrity depends on `hdi = 0.8`. Coordinator depends on `hdk = 0.7` and the integrity crate.
 

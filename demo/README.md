@@ -1,4 +1,4 @@
-# The RAF Workbench
+# The Hallmark Workbench
 
 The demonstration. It runs the attestation rules in a browser so anyone can see them work without
 a Holochain conductor, a Rust toolchain, or an explanation.
@@ -145,7 +145,7 @@ Without this the working area started 1058px down the page on a phone.
 
 This was built inside a Grok workspace template, and some of it came along: `scripts/` (PWA and
 brand-check plugins wired into `vite.config.ts`), `server/`, `migrations/`, and the auth and PGlite
-machinery in `src/lib/`. None of it is used by the RAF demo.
+machinery in `src/lib/`. None of it is used by the Hallmark demo.
 
 `npm run test:platform` runs that template's own tests. Several fail here because they read
 `.grok/` files that do not exist outside the workspace. CI does not run them. See

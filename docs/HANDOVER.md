@@ -34,7 +34,7 @@ The rules are running in the browser. The Rust they mirror is readable in-app un
 | `docs/HANDOVER.md` | This file |
 | `docs/RESEARCH-ARCHIVE.md` | The market research that chose aviation. Historical, unmaintained |
 | `docs/CODE-REVIEW-ARCHIVE.md` | Reviews of earlier drafts. Historical; explains why the design is shaped this way |
-| `demo/` | The RAF Workbench. **`demo/README.md` explains what each screen does and how it maps to the zome** |
+| `demo/` | The Hallmark Workbench. **`demo/README.md` explains what each screen does and how it maps to the zome** |
 | `demo/src/lib/raf/` | The TypeScript engine: `types`, `validate`, `verify`, `engine` |
 | `demo/zomes/` | The Holochain zome (Rust), `integrity` and `coordinator` crates |
 | `demo/zomes/tests/` | The end-to-end conductor smoke test |
@@ -98,7 +98,7 @@ before writing any UI against the conductor.
 
 | Command | What it runs |
 |---|---|
-| `npm test` | The RAF engine, the conformance check against the zome, and app-data/gate-identity units |
+| `npm test` | The Hallmark engine, the conformance check against the zome, and app-data/gate-identity units |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `node zomes/tests/conductor-smoke.mjs` | End to end against a running conductor |
@@ -112,7 +112,7 @@ They are kept because `vite.config.ts` still uses the plugins they cover. CI doe
 
 **If you are stripping the Grok scaffolding**, the plugins wired into `vite.config.ts` are
 `grok-pwa-plugin.mjs`, `app-env-plugin.mjs` and `migration-plan.mjs`. The auth, PGlite and
-migration machinery is also inherited and unused by the RAF demo.
+migration machinery is also inherited and unused by the Hallmark demo.
 
 ---
 

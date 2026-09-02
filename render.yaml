@@ -1,4 +1,4 @@
-# Render blueprint for the RAF Workbench demo.
+# Render blueprint for the Hallmark Workbench demo.
 #
 # In Render: New > Blueprint, point it at this repository, and it reads this file.
 # The repository is private, so Render needs GitHub access to the ValiChord org.

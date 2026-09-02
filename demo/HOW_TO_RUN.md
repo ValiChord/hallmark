@@ -1,4 +1,4 @@
-# How to run the RAF Workbench demo
+# How to run the Hallmark Workbench demo
 
 This is a complete copy of the app with the review improvements already applied.
 
@@ -26,7 +26,7 @@ This is a complete copy of the app with the review improvements already applied.
    ```
 5. When it says something like “Local: http://localhost:8080”, open that address in your browser.
 
-You should see the RAF Workbench with tabs: Issue, Attest, Revoke, Verify, and Ledger.
+You should see the Hallmark Workbench with tabs: Issue, Attest, Revoke, Verify, and Ledger.
 
 ## What the demo does
 
@@ -46,7 +46,7 @@ No Holochain conductor is required — the browser simulation runs everything lo
 
 ## A note on the test scripts
 
-`npm test` runs the tests that belong to this project: the RAF engine, its conformance
+`npm test` runs the tests that belong to this project: the Hallmark engine, its conformance
 check against the Holochain zome, and the app-data and gate-identity units.
 
 `npm run test:platform` runs the tests under `scripts/`, which came with the Grok

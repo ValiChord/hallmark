@@ -207,8 +207,6 @@ are deliberately unfixed.
 
 ## Open questions
 
-- **The name.** "Hallmark" and "Release Attestation Format" are both working
-  titles, and the repo currently uses both.
 - **The licence.** All rights reserved today. A specification needs a licence
   that lets other people implement it. This has to be settled before anything is
   published outside the org.

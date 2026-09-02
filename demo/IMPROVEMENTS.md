@@ -1,4 +1,4 @@
-# RAF improvements (zomes + TypeScript simulator)
+# Hallmark improvements (zomes + TypeScript simulator)
 
 Applied after independent review of Holochain 0.7 / HDI 0.8 idioms and the parallel browser engine.
 

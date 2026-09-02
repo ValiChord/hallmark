@@ -8,7 +8,7 @@ export function RafFooter() {
     <footer className="mt-10 border-t border-border">
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs leading-relaxed text-muted-foreground sm:px-6">
         <p>
-          <span className="text-fg">Release Attestation Format</span> — a working demonstration.
+          <span className="text-fg">Hallmark</span> — a working demonstration.
           Company names, part numbers and certificates shown here are invented.
         </p>
         <p>

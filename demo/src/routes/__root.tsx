@@ -1,7 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "RAF Workbench";
+const APP_NAME = "Hallmark";
 
 export const Route = createRootRoute({
   head: () => ({
