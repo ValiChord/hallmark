@@ -31,3 +31,6 @@ desktop/pouch/*.webhapp
 desktop/dev.log
 desktop/build/icon.*
 desktop/ui/public/icon.png
+desktop/qr-sample.png
+desktop/build-win.log
+desktop/dist/

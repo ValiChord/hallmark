@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { decodeHashFromBase64 } from "@holochain/client";
+import QRCode from "qrcode";
 import { call, connect, recordEntry, recordHash, b64, type NodeInfo } from "./hc";
 
 type Tab = "node" | "network" | "accredit" | "attest" | "verify";
@@ -251,6 +252,8 @@ function NetworkPanel({ setBanner }: { setBanner: (b: Banner) => void }) {
 
       <ServersCard setBanner={setBanner} />
 
+      <JoinCode networkKey={networkKey} setBanner={setBanner} />
+
       <div className="card">
         <h2>3. Introduce your devices</h2>
         <p className="lede small" style={{ marginBottom: 12 }}>
@@ -303,6 +306,93 @@ function NetworkPanel({ setBanner }: { setBanner: (b: Banner) => void }) {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * One code that carries everything a phone needs to join.
+ *
+ * Both halves in a single scan: the network key (which network, permanent) and
+ * this device's peer info (where to find it, 20-minute expiry). Measured at
+ * ~860 characters against a QR ceiling of 2,953 bytes, so it fits with room for
+ * the higher error correction a camera reading a screen wants.
+ *
+ * Deliberately one-directional. The phone learns this device; once it connects,
+ * this device learns the phone. There is nothing to swap back, which is the
+ * whole point — pasting base64 between machines is miserable.
+ */
+function JoinCode({
+  networkKey,
+  setBanner,
+}: {
+  networkKey: string;
+  setBanner: (b: Banner) => void;
+}) {
+  const api = bridge()!;
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [size, setSize] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [madeAt, setMadeAt] = useState<Date | null>(null);
+
+  const generate = useCallback(async () => {
+    if (!networkKey) return;
+    setBusy(true);
+    try {
+      const peer = await api.getPeerInfo();
+      const payload = JSON.stringify({ v: 1, k: networkKey, p: JSON.parse(peer) });
+      setSize(payload.length);
+      if (canvasRef.current) {
+        await QRCode.toCanvas(canvasRef.current, payload, {
+          errorCorrectionLevel: "M",
+          margin: 2,
+          width: 320,
+          color: { dark: "#0c0e11", light: "#e8e6e1" },
+        });
+      }
+      setMadeAt(new Date());
+    } catch (e) {
+      setBanner({ ok: false, text: reason(e) });
+    } finally {
+      setBusy(false);
+    }
+  }, [api, networkKey, setBanner]);
+
+  useEffect(() => {
+    void generate();
+  }, [generate]);
+
+  return (
+    <div className="card">
+      <h2>Join by scanning</h2>
+      <p className="lede small" style={{ marginBottom: 14 }}>
+        One code, both halves: which network this is, and where to find this device. A phone that
+        scans it joins and connects in a single step — no copying, no pasting.
+      </p>
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <canvas
+          ref={canvasRef}
+          style={{ background: "#e8e6e1", borderRadius: 10, padding: 8, width: 320, height: 320 }}
+        />
+        <div style={{ minWidth: 220, flex: 1 }}>
+          <div className="kv">
+            <span className="k">Payload</span>
+            <span className="v">{size ? `${size} characters` : "—"}</span>
+          </div>
+          <div className="kv">
+            <span className="k">Generated</span>
+            <span className="v">{madeAt ? madeAt.toLocaleTimeString() : "—"}</span>
+          </div>
+          <p className="lede small" style={{ marginBottom: 12 }}>
+            The peer half <strong>expires after 20 minutes</strong>. If a device fails to connect,
+            regenerate and scan again — the network half never goes stale, so nothing is lost by
+            doing it twice.
+          </p>
+          <button className="ghost" onClick={() => void generate()} disabled={busy}>
+            {busy ? "Generating…" : "Regenerate"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
