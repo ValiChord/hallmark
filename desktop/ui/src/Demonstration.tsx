@@ -13,6 +13,11 @@ import { call, b64, type NodeInfo } from "./hc";
  * That matters. A checklist that trusts what the user clicked will cheerfully
  * report success while the conductor disagrees, which is exactly the failure a
  * demonstration must not have in front of an audience.
+ *
+ * Three states, and the distinction between the last two is the point. "yours"
+ * is something the person at this keyboard can do right now. "second device" is
+ * not a failure and must not be dressed as one — it is the architecture being
+ * honest that one machine cannot show two parties.
  */
 
 type Status = {
@@ -26,14 +31,30 @@ type Status = {
 type Bridge = { nodeStatus(): Promise<Status> };
 const bridge = () => (window as unknown as { __HALLMARK__?: Bridge }).__HALLMARK__;
 
+type State = "done" | "yours" | "second";
+
 type Check = {
   title: string;
   /** What the audience should be seeing, in plain language. */
   what: string;
   /** How to make it true, if it is not. */
   how: string;
-  state: "done" | "todo" | "blocked";
+  state: State;
   evidence?: string;
+  /** The one step the whole thing exists to reach. */
+  payoff?: boolean;
+};
+
+const LABEL: Record<State, string> = {
+  done: "done",
+  yours: "your move",
+  second: "needs a 2nd device",
+};
+
+const COLOUR: Record<State, string> = {
+  done: "var(--ok)",
+  yours: "var(--primary)",
+  second: "var(--muted)",
 };
 
 export function Demonstration({ node }: { node: NodeInfo }) {
@@ -73,6 +94,7 @@ export function Demonstration({ node }: { node: NodeInfo }) {
   }
 
   const canSign = (memberships ?? 0) > 0;
+  const connected = status.peerCount > 0;
 
   const checks: Check[] = [
     {
@@ -83,9 +105,11 @@ export function Demonstration({ node }: { node: NodeInfo }) {
       evidence: node.agentB64,
     },
     {
-      title: "Every device is on the same network",
+      title: "Every device is running identical rules",
       what: `Compare the DNA hash on each device. If they match, none of them can be running different rules — it is a checksum over the rules themselves. ${
-        status.rootCount === 1 ? "This network has one root authority." : `This network has ${status.rootCount} root authorities.`
+        status.rootCount === 1
+          ? "This network has one root authority."
+          : `This network has ${status.rootCount} root authorities.`
       }`,
       how: "On the device that owns the network, open Network and show the join code. Scan it from each other device, then relaunch that device.",
       state: "done",
@@ -93,13 +117,14 @@ export function Demonstration({ node }: { node: NodeInfo }) {
     },
     {
       title: "The devices have found each other",
-      what:
-        status.peerCount > 0
-          ? `This device knows ${status.peerCount} other ${status.peerCount === 1 ? "peer" : "peers"}.`
-          : "This device has not heard of any other node yet.",
-      how: "Both devices need the same bootstrap and relay. Run `npm run network` on the machine hosting them, put that address in Network on every device, and relaunch. On a wifi you control this needs nobody else's servers.",
-      state: status.peerCount > 0 ? "done" : "todo",
-      evidence: `${status.peerCount} peer${status.peerCount === 1 ? "" : "s"}${status.usingOwnServers ? " · using your own servers" : " · using the public dev servers"}`,
+      what: connected
+        ? `This device knows ${status.peerCount} other ${status.peerCount === 1 ? "peer" : "peers"}.`
+        : "This device has not heard of any other node yet. On its own that is expected — nothing is wrong until you have a second device running and they still cannot see each other.",
+      how: "Open Network and put the same bootstrap and relay address on every device, then relaunch each one. On a wifi you control, the Network tab can point at a server you run yourself, so this needs nobody else's infrastructure.",
+      state: connected ? "done" : "second",
+      evidence: `${status.peerCount} peer${status.peerCount === 1 ? "" : "s"} · ${
+        status.usingOwnServers ? "your own servers" : "the public dev servers"
+      }`,
     },
     {
       title: status.isRoot ? "You are this network's root authority" : "This device has been accredited",
@@ -109,75 +134,79 @@ export function Demonstration({ node }: { node: NodeInfo }) {
           ? "A root authority has granted this device the right to sign. That grant has an expiry, and it can be withdrawn."
           : "This device holds no accreditation, so it cannot sign anything. That is the rule working, not a fault.",
       how: status.isRoot
-        ? "Open Accredit, paste another device's key from its This node tab, and issue."
+        ? "Open Accredit, paste the other device's key from its This node tab, and issue."
         : "Ask whoever holds the root key to accredit the key shown above.",
-      state: status.isRoot || canSign ? "done" : "todo",
+      state: status.isRoot || canSign ? "done" : "second",
       evidence: status.isRoot ? "root authority" : `${memberships ?? 0} accreditation(s)`,
     },
     {
-      title: "An accredited device signs a certificate",
-      what: "The signer records what it did, and — the load-bearing part — what it did not check. A later reader cannot take silence for a claim.",
+      title: "The accredited device signs a certificate",
+      what: "The signer records what it did and — the load-bearing part — what it did not check. A later reader cannot take silence for a claim.",
       how: canSign
-        ? "Open Attest, choose what was done, and mark at least one thing as explicitly not checked."
-        : "Do the previous step first: this device cannot sign without an accreditation.",
-      state: canSign ? "todo" : "blocked",
+        ? "Open Attest, choose what was done, and mark at least one thing as explicitly not checked. Keep the hash it gives you."
+        : "This is done on the accredited device, not this one. It cannot sign without an accreditation.",
+      state: canSign ? "yours" : "second",
     },
     {
       title: "A different device verifies it",
-      what: "Paste the attestation hash into Verify on a device that did not sign it. It fetches the record and the accreditation behind it from the network, and checks them against rules it holds itself. It does not contact the signer.",
-      how: "Copy the hash from the signing device and paste it into Verify on another one. For the strongest version, close the signing device first.",
-      state: "todo",
+      what: "Open Verify on a device that did not sign. It fetches the record and the accreditation behind it from the network, and checks them against rules it holds itself. It never contacts the signer.",
+      how: "Paste the hash from the signing device into Verify here. For the strongest version, close the signing device first — then nobody the verifier could ask is even running.",
+      state: connected ? "yours" : "second",
     },
     {
-      title: "The two answers",
-      what: "Withdraw the signer's accreditation, then verify the same record again. Historically valid stays yes; currently trusted becomes no. The certificate was honest when it was signed and stays a real document — what it no longer supports is new reliance.",
-      how: "Revocation is not yet in this app's UI. For now, show this part in the browser demo's Walkthrough tab, which runs the same rules.",
-      state: "blocked",
+      title: "Withdraw the accreditation, and verify again",
+      what: "Historically valid stays yes. Currently trusted becomes no. The certificate was honest when it was signed and stays a real document — what it no longer supports is new reliance. Almost every system collapses those two into one word.",
+      how: status.isRoot
+        ? "Open Revoke, find the accreditation you issued, and withdraw it. Then verify the same record again and watch one answer change and the other hold."
+        : "This is done by whoever issued the accreditation — the root authority.",
+      state: status.isRoot ? "yours" : "second",
+      payoff: true,
     },
   ];
 
   return (
     <>
       <div className="card">
-        <h2>Running the demonstration</h2>
-        <p className="lede small">
-          A checklist for something genuinely happening across your devices, rather than a story
-          this app tells itself. Every line is read back from the conductor — if it says done, the
-          conductor agrees.
+        <h2>What you are about to show</h2>
+        <p className="lede">
+          One device signs a certificate. A second device — which never speaks to the first —
+          checks it and agrees. Then the approval behind it is withdrawn, and the same record comes
+          back <strong>still historically valid</strong> but <strong>no longer trusted</strong>.
         </p>
-        <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <p className="lede small" style={{ marginTop: 12 }}>
+          The browser demo plays five organisations at once, because it is a simulation and can. A
+          real node holds one key and cannot pretend to be anybody else, so the only way to show a
+          second party here is to have a second party. <strong>That constraint is the evidence.</strong>{" "}
+          When a device that never spoke to the signer verifies the signer's record, nothing about
+          it can have been staged.
+        </p>
+        <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center", flexWrap: "wrap" }}>
           <button className="ghost" onClick={() => void refresh()} disabled={busy}>
             {busy ? "Checking…" : "Re-check"}
           </button>
           <span className="muted small">
-            {refreshedAt ? `Last checked ${refreshedAt.toLocaleTimeString()}` : ""} · re-checks
-            automatically
+            {refreshedAt ? `Last checked ${refreshedAt.toLocaleTimeString()} · ` : ""}
+            every line below is read back from the conductor, not remembered
           </span>
         </div>
       </div>
 
       {checks.map((c, i) => (
-        <div className="card" key={c.title}>
+        <div
+          className="card"
+          key={c.title}
+          style={c.payoff ? { boxShadow: "0 0 0 1px rgba(158, 207, 160, 0.45)" } : undefined}
+        >
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span className="mono" style={{ fontSize: 11, color: "var(--primary)" }}>
               {String(i + 1).padStart(2, "0")}
             </span>
             <h2 style={{ margin: 0, flex: 1 }}>{c.title}</h2>
-            <span
-              className="tag"
-              style={{
-                color:
-                  c.state === "done"
-                    ? "var(--ok)"
-                    : c.state === "blocked"
-                      ? "var(--muted)"
-                      : "var(--danger)",
-              }}
-            >
-              {c.state === "done" ? "done" : c.state === "blocked" ? "waiting" : "to do"}
+            <span className="tag" style={{ color: COLOUR[c.state] }}>
+              {LABEL[c.state]}
             </span>
           </div>
-          <p className="lede small" style={{ marginTop: 10 }}>
+          <p className={c.payoff ? "lede" : "lede small"} style={{ marginTop: 10 }}>
             {c.what}
           </p>
           {c.state !== "done" ? (
@@ -193,19 +222,6 @@ export function Demonstration({ node }: { node: NodeInfo }) {
           ) : null}
         </div>
       ))}
-
-      <div className="card">
-        <h2>What this shows that the browser demo cannot</h2>
-        <p className="lede small">
-          The browser demo plays five organisations at once, because it is a simulation and can. A
-          real node holds one key and cannot pretend to be anybody else — so the only way to show a
-          second party here is to have a second party.
-        </p>
-        <p className="lede small" style={{ marginTop: 10 }}>
-          That constraint is the evidence. When a device that never spoke to the signer verifies the
-          signer's record, nothing about it can have been staged.
-        </p>
-      </div>
     </>
   );
 }

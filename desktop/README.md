@@ -227,8 +227,11 @@ passphrase — appropriate for a demonstration, not for production keys.
   happens on each node — but they are infrastructure somebody else operates, and
   "no operator" is a claim about the *rules*, not about peer discovery. Point
   those URLs elsewhere if that matters to you.
-- **The UI covers the core loop only** — identity, accredit, attest, verify. The
-  browser demo has more surface, including revocation and counter-attestation.
+- **The UI covers the demonstration loop** — identity, accredit, attest, verify
+  and revoke. Counter-attestation is in the browser demo only. Revocation here
+  offers `Administrative` grounds alone: the evidence-bearing grounds need the
+  validator to fetch records that demonstrate the fault, which is a job for the
+  conductor tests rather than a form.
 - **Auto-updates are configured but not set up**; there is no release feed.
 - The app has been run end to end on Windows. macOS and Linux builds are
   configured but untested.

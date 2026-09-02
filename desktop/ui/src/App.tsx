@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { decodeHashFromBase64 } from "@holochain/client";
 import QRCode from "qrcode";
 import { Demonstration } from "./Demonstration";
+import { Revoke, rememberAccredited } from "./Revoke";
 import { call, connect, recordEntry, recordHash, b64, type NodeInfo } from "./hc";
 
-type Tab = "demo" | "node" | "network" | "accredit" | "attest" | "verify";
+type Tab = "demo" | "node" | "network" | "accredit" | "attest" | "verify" | "revoke";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "demo", label: "Demonstration" },
@@ -13,6 +14,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "accredit", label: "Accredit" },
   { id: "attest", label: "Attest" },
   { id: "verify", label: "Verify" },
+  { id: "revoke", label: "Revoke" },
 ];
 
 /** Bridged from the main process — see src/preload/happ.ts. */
@@ -78,11 +80,12 @@ export function App() {
   return (
     <div className="app">
       <header className="top">
-        <p className="kicker">Hallmark · aviation provenance</p>
-        <h1>Your node</h1>
+        <p className="kicker">Hallmark · aircraft part release certificates</p>
+        <h1>Was this shop allowed to sign — and are they still?</h1>
         <p className="lede">
-          Everything below runs on this machine. There is no server, and no account. The rules are
-          in the conductor, and the records live with whoever holds them.
+          Two answers, never one. A certificate stays a real document forever; the approval behind
+          it can be withdrawn. Everything below runs on this machine — no server, no account, and
+          no company in the middle. <strong>Start on the Demonstration tab.</strong>
         </p>
       </header>
 
@@ -104,6 +107,7 @@ export function App() {
       {tab === "accredit" ? <Accredit node={node} setBanner={setBanner} /> : null}
       {tab === "attest" ? <Attest node={node} setBanner={setBanner} /> : null}
       {tab === "verify" ? <Verify setBanner={setBanner} /> : null}
+      {tab === "revoke" ? <Revoke node={node} setBanner={setBanner} /> : null}
     </div>
   );
 }
@@ -511,7 +515,12 @@ function Accredit({ node, setBanner }: { node: NodeInfo; setBanner: (b: Banner) 
         depth: 1,
       });
       const hash = recordHash(record as never);
-      setBanner({ ok: true, text: `Accreditation issued: ${hash ? b64(hash) : "committed"}` });
+      // Remembered so the Revoke tab can offer this key back rather than a blank box.
+      rememberAccredited(agent.trim());
+      setBanner({
+        ok: true,
+        text: `Accreditation issued: ${hash ? b64(hash) : "committed"}. They can now sign; you can withdraw it from Revoke.`,
+      });
     } catch (e) {
       setBanner({ ok: false, text: reason(e) });
     } finally {

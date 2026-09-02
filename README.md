@@ -187,7 +187,8 @@ Checked automatically on every push, against real Holochain binaries:
   conductors on one computer. Separate physical hosts, network splits and
   hostile peers are all untested.
 - **No Android app.** Blocked on an unreleased Holochain library.
-- **The desktop app cannot revoke.** Only the browser demo can.
+- **Counter-attestation is browser-demo only.** The desktop app covers identity,
+  accredit, attest, verify and revoke.
 - **No legal timestamp yet.** The format specifies one; nothing issues or checks
   it. Until it does, a signer can back-date a record.
 - **Nothing checks a document against its fingerprint.** The fingerprint is
