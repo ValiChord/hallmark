@@ -564,3 +564,37 @@ Code was never the hard part, and having some does not change these.
 The demonstration exists so those conversations have something to point at. It is
 not a substitute for having them. If the effort on this project is 80%
 engineering, it matches the profile of every corpse in the archive.
+
+---
+
+## Audit: does the demo copy still match the argument?
+
+The market claims in this document changed substantially on 2 September 2026 —
+the motivating case, the competitor picture and three kill conditions all moved.
+The obvious follow-up risk is that the demos went on saying the old thing.
+
+**Checked, and they did not.** Searched `demo/` and `desktop/` for the claims
+that were retired: AOG Technics as the motivating case, "no way for a stranger to
+check", forgery as the dominant failure mode, and "a specification, never a
+platform".
+
+**The desktop app: no matches.** The browser demo: four, all of which survive.
+
+| Where | What it says | Why it stands |
+|---|---|---|
+| `demo/README.md` | The failures targeted "are not forgeries; they are assertions made wider than what the signer actually saw" | Strengthened, not weakened. Forgery turned out to be rare — one FAA notice in sixteen years — so "not forgeries" is now the evidenced position |
+| `src/routes/airworthiness.tsx` | "The coalition asked for back-to-birth traceability" | Accurate characterisation of Recommendation #9, and makes no claim about ownership |
+| `src/components/raf/workbench.tsx` | "Who runs it? **Nobody yet** — and that is the honest open question… the same build can run under the FAA, under EASA, under a coalition secretariat, or under a foundation" | Still true, and it never claimed a neutral operator was impossible — which is the claim CertiPath would have refuted |
+| `src/components/raf/workbench.tsx` | "Withdrawing that approval later does not reach back and turn an honest document into a forgery" | The Aviatronics distinction, already stated correctly in the product |
+
+**Why it came out clean:** the demos only ever explain the mechanism — the two
+answers, `not_observed`, the delegation chain. Everything that failed on
+2 September was a *market* claim, and those lived here and in the README. The
+demo never made them.
+
+Worth noting the last two rows. The workbench was more careful than this document
+was: it treated a neutral operator as a live option while the design constraints
+above were still asserting that no operator could exist, and it described the
+lapsed-approval case correctly before that became the project's headline claim.
+**When the argument and the product disagree, check which one is right before
+assuming it is the product.**
