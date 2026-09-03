@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
-import { decodeHashFromBase64 } from "@holochain/client";
-import { call, recordEntry, recordHash, b64, type NodeInfo } from "./hc";
+import { call, recordEntry, recordHash, b64, parseAgentKey, parseActionHash, type NodeInfo } from "./hc";
 
 /**
  * Withdrawing an accreditation.
@@ -75,7 +74,7 @@ export function Revoke({
     setBanner(null);
     setRows(null);
     try {
-      const target = decodeHashFromBase64(key);
+      const target = parseAgentKey(key);
       const [proofs, revocations] = await Promise.all([
         call<unknown[]>("get_memberships_for_agent", Array.from(target)),
         call<unknown[]>("get_revocations_for_agent", Array.from(target)),
@@ -122,7 +121,7 @@ export function Revoke({
     setBanner(null);
     try {
       const record = await call("revoke_membership", {
-        membership_hash: Array.from(decodeHashFromBase64(row.hash)),
+        membership_hash: Array.from(parseActionHash(row.hash)),
         // `{ Administrative: null }`, not the bare string. This is the form
         // zomes/tests/network-gossip.mjs uses against a real conductor in CI,
         // and the encoding is the part worth copying rather than deriving.

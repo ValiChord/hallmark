@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { decodeHashFromBase64 } from "@holochain/client";
 import QRCode from "qrcode";
 import { Demonstration } from "./Demonstration";
 import { Revoke, rememberAccredited } from "./Revoke";
-import { call, connect, recordEntry, recordHash, b64, type NodeInfo } from "./hc";
+import { call, connect, recordEntry, recordHash, b64, parseAgentKey, parseActionHash, type NodeInfo } from "./hc";
 
 type Tab = "demo" | "node" | "network" | "accredit" | "attest" | "verify" | "revoke";
 
@@ -497,7 +496,7 @@ function Accredit({ node, setBanner }: { node: NodeInfo; setBanner: (b: Banner) 
     setBanner(null);
     try {
       const record = await call("issue_membership", {
-        agent_pubkey: Array.from(decodeHashFromBase64(agent.trim())),
+        agent_pubkey: Array.from(parseAgentKey(agent)),
         role: "Mro",
         organisation: org,
         organisation_id: orgId,
@@ -633,7 +632,7 @@ function Attest({ node, setBanner }: { node: NodeInfo; setBanner: (b: Banner) =>
           organisation: memberships.find((m) => m.hash === membershipHash)?.org ?? "",
           organisation_id: "UK.145.01234",
         },
-        membership_proof_hash: Array.from(decodeHashFromBase64(membershipHash)),
+        membership_proof_hash: Array.from(parseActionHash(membershipHash)),
         anchor: null,
       });
       const hash = recordHash(record as never);
@@ -761,7 +760,7 @@ function Verify({ setBanner }: { setBanner: (b: Banner) => void }) {
     setBanner(null);
     setReport(null);
     try {
-      const r = await call<Report>("verify_attestation", Array.from(decodeHashFromBase64(hash.trim())));
+      const r = await call<Report>("verify_attestation", Array.from(parseActionHash(hash)));
       setReport(r);
     } catch (e) {
       setBanner({ ok: false, text: reason(e) });

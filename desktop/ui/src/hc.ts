@@ -1,6 +1,7 @@
 import {
   AppWebsocket,
   encodeHashToBase64,
+  decodeHashFromBase64,
   type AppClient,
   type CellId,
   type ActionHash,
@@ -81,4 +82,55 @@ export function recordEntry<T>(record: unknown): T | undefined {
     ?.entry;
   if (!present) return undefined;
   return decode(present) as T;
+}
+
+/**
+ * Hash inputs typed or pasted by a person.
+ *
+ * `decodeHashFromBase64` does not validate: given anything at all it returns
+ * whatever bytes it can, so a mistyped or wrong-kind hash travels all the way to
+ * the conductor and comes back as a Wasm deserialize error naming a zome
+ * function. That is unreadable, and it happens in front of an audience.
+ *
+ * Every Holochain hash is 39 bytes and carries a 3-byte prefix saying what it
+ * is. Check both here and say plainly what went wrong.
+ */
+const AGENT_PREFIX = [132, 32, 36]; // uhCAk…
+const ACTION_PREFIX = [132, 41, 36]; // uhCkk…
+
+function parseHash(input: string, want: number[], kind: string, where: string): Uint8Array {
+  const text = input.trim();
+  if (!text) throw new Error(`Nothing entered. Paste ${kind}. ${where}`);
+  let bytes: Uint8Array;
+  try {
+    bytes = decodeHashFromBase64(text);
+  } catch {
+    throw new Error(`That is not ${kind}. ${where}`);
+  }
+  if (bytes.length !== 39) {
+    throw new Error(
+      `That is not ${kind} — it decodes to ${bytes.length} bytes, and every Holochain hash is 39. ${where}`,
+    );
+  }
+  const prefix = Array.from(bytes.slice(0, 3));
+  if (prefix.join() !== want.join()) {
+    const got =
+      prefix.join() === AGENT_PREFIX.join()
+        ? "an agent key"
+        : prefix.join() === ACTION_PREFIX.join()
+          ? "a record hash"
+          : "some other kind of hash";
+    throw new Error(`That is ${got}, not ${kind}. ${where}`);
+  }
+  return bytes;
+}
+
+/** An agent's public key, as shown on the This node tab. */
+export function parseAgentKey(input: string): Uint8Array {
+  return parseHash(input, AGENT_PREFIX, "an agent key", "An agent key begins uhCAk and is on the other device's This node tab. The Network tab's join code is a different, much longer thing.");
+}
+
+/** A hash identifying a record, such as an attestation or a membership. */
+export function parseActionHash(input: string): Uint8Array {
+  return parseHash(input, ACTION_PREFIX, "a record hash", "A record hash begins uhCkk and is given to you when a record is signed.");
 }
