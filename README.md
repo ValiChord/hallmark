@@ -245,7 +245,7 @@ anyway**. Setup and the two-device walkthrough are in
 | `docs/WHY.md` | Why this problem, why now, and what would kill it |
 | `docs/TECHNICAL-REFERENCE.md` | What the code enforces, and where |
 | `docs/HANDOVER.md` | For an engineer picking this up |
-| `LICENCE.md` | All rights reserved (see *Open questions*) |
+| `LICENCE.md` | Apache 2.0, except the Rust zomes — see *Open questions* |
 
 Three folders are historical and will mislead you about the current state.
 Do not start there: `docs/RESEARCH-ARCHIVE.md`, `docs/CODE-REVIEW-ARCHIVE.md`,
@@ -296,9 +296,12 @@ are deliberately unfixed.
 
 ## Open questions
 
-- **The licence.** All rights reserved today. A specification needs a licence
-  that lets other people implement it. This has to be settled before anything is
-  published outside the org.
+- **The zomes's licence.** The specification, both demos and the desktop app are
+  **Apache 2.0** — anyone may implement the format. The Rust zomes in
+  `demo/zomes/` are held back: they link Holochain's `hdk` and `hdi`, which are
+  CAL-1.0 copyleft, and whether that reaches code linking them is a real
+  question. It has been put to Holochain. You do not need the zomes to implement
+  the format.
 - **Who holds the root keys.** The code proves roots can be set per deployment.
   It cannot tell you whose keys belong there.
 
