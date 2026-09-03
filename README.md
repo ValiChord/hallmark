@@ -27,16 +27,11 @@ where the enforcement actually lives. Rust, on Holochain. What a record must
 contain, who may sign it, and when a revocation is accepted. About 900 lines, and
 the surrounding [`demo/zomes/`](demo/zomes/) has a build guide.
 
-**[Install the desktop app](https://github.com/ValiChord/hallmark/releases/tag/desktop-v0.1.0)**
+**[Install the desktop app](https://github.com/ValiChord/hallmark/releases/tag/desktop-v0.1.1)**
 — a real peer-to-peer node with its own key. Two machines verify each other's
 records without either contacting the other. Not code-signed, so Windows warns:
 click **More info**, then **Run anyway**. Setup is in
 [desktop/README.md](desktop/README.md).
-
-> **Note:** the published `desktop-v0.1.0` build predates the Revoke tab. To see
-> an accreditation withdrawn on a real node, build from source — the steps are in
-> [desktop/README.md](desktop/README.md). The browser demo shows the same thing
-> with nothing to install.
 
 **Or run it locally:**
 
@@ -290,8 +285,7 @@ Checked automatically on every push, against real Holochain binaries:
   hostile peers are all untested.
 - **No Android app.** Blocked on an unreleased Holochain library.
 - **Counter-attestation is browser-demo only.** The desktop app covers identity,
-  accredit, attest, verify and revoke — but see the note on the installer above:
-  the currently published build predates the revoke tab.
+  accredit, attest, verify and revoke.
 - **No legal timestamp yet.** The format specifies one; nothing issues or checks
   it. Until it does, a signer can back-date a record.
 - **Nothing checks a document against its fingerprint.** The fingerprint is

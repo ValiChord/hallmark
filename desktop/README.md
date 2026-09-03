@@ -70,7 +70,7 @@ Because there is no signature to check, verify the file by its hash instead. The
 value is published with each release:
 
 ```powershell
-Get-FileHash .\uk.valichord.hallmark-0.1.0-setup.exe -Algorithm SHA256
+Get-FileHash .\uk.valichord.hallmark-0.1.1-setup.exe -Algorithm SHA256
 ```
 
 Antivirus software may object separately, with its own dialog and its own
@@ -220,9 +220,6 @@ passphrase — appropriate for a demonstration, not for production keys.
 
 ## Honest limits
 
-- **The published installer is behind the source.** Release `desktop-v0.1.0`
-  was built before the Revoke tab existed. To get revocation, build from source
-  with the steps above. A newer release will supersede this note.
 - **Not code-signed.** Windows SmartScreen and macOS Gatekeeper will complain.
 - **The bootstrap and relay servers are Holochain's public dev infrastructure**
   (`dev-test-bootstrap2.holochain.org`, set in `kangaroo.config.ts`). Peers use
