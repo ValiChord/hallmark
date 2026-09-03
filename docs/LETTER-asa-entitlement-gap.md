@@ -40,7 +40,7 @@ TAC-2000 standard. Transonic had previously accredited AOG Technics.
 
 Certificates issued by distributors holding a Transonic-granted accreditation
 were, so far as the accreditation was concerned, properly issued at the time. The
-accreditation no longer stands. We are not aware of any mechanism that connects
+accreditation no longer stands. I am not aware of any mechanism that connects
 those two facts, or that identifies the affected documents.
 
 ## 2. The general case
@@ -56,7 +56,7 @@ parts distributors inspect their aircraft, aircraft records and parts inventorie
 for articles released after that date.
 
 The interval between surrender and notification was approximately three years and
-six months. We are not aware of any means of identifying affected certificates
+six months. I am not aware of any means of identifying affected certificates
 other than manual review.
 
 Comparable cases include Sauer Flugmotorenbau (certificates invalidated by the
@@ -68,10 +68,10 @@ In each case above the signature is genuine, the document is unaltered, and the
 issuing organization is correctly identified. The deficiency is that the
 entitlement behind the signature had ended.
 
-We note the industry's progress on document authentication, including the first
+I note the industry's progress on document authentication, including the first
 shipment carrying a digital FAA Form 8130-3 in October 2025 (Boeing, Southwest
 Airlines and Aeroxchange), which authenticates signer identity and document
-integrity. That work addresses a different deficiency and we do not suggest
+integrity. That work addresses a different deficiency and I do not suggest
 otherwise.
 
 ## 4. Absence of revocation terminology in the Coalition's 2024 report
@@ -100,7 +100,7 @@ Programming Interfaces "to facilitate real-time data querying" of OEM, air
 carrier and production approval holder databases.
 
 A real-time query establishes present status. It does not establish status at the
-date of signature. We consider these to be distinct requirements.
+date of signature. I consider these to be distinct requirements.
 
 ## 6. Scope of ATA Spec 2000 Chapter 16
 
@@ -129,14 +129,14 @@ repair stations and part 147 Aviation Maintenance Technician Schools to obtain
 authorization for electronic and digital systems through OpSpec A025.
 
 OpSpec A025 is presently the point at which a repair station's electronic
-signature arrangements receive review external to the certificate holder. We are
+signature arrangements receive review external to the certificate holder. I am
 unable to confirm the current status of the draft, which does not appear on the
 FAA's list of drafts open for comment. FAA Notices N 8900.368 and N 8900.458 are
 related.
 
-## 8. Our questions
+## 8. My questions
 
-We would be grateful for your view on the following:
+I would be grateful for your view on the following:
 
 - Following the removal of Transonic in April 2024, is there any means by which a
   recipient can determine which certificates were issued under accreditations
@@ -149,32 +149,32 @@ We would be grateful for your view on the following:
 - Is the distinction between status at the date of signature and status at the
   date of enquiry one your members would regard as material?
 
-- If the position described above is mistaken, we would welcome correction.
+- If the position described above is mistaken, I would welcome correction.
 
 ## 9. Work undertaken
 
-We have developed a reference implementation, published under Apache 2.0 at
+I have developed a reference implementation, published under Apache 2.0 at
 https://github.com/ValiChord/hallmark. It records two determinations separately:
 whether a record was properly authorized when signed, and whether a reader should
 rely on the signer at present. It also permits a signer to record what was not
 examined, so that silence is not read as assent.
 
-The author is not a software engineer and the implementation was produced with
+I am not a software engineer, and the implementation was produced with
 substantial use of AI coding tools; the commit history records this. It is a
 demonstration rather than a product. The rules execute in a live conductor, two
 independent nodes verify one another's records on every change, and a browser
 version implementing the same rules without any network is available without
 installation.
 
-We would welcome technical criticism of it.
+I would welcome technical criticism of it.
 
 ## 10. Conclusion
 
-Our question is whether, when an accreditation or approval ends, the affected
+My question is whether, when an accreditation or approval ends, the affected
 certificates can be identified.
 
-If a means exists, we have not found it and would be glad to be corrected. If
-none exists, we would be interested to know whether that is regarded as a
+If a means exists, I have not found it and would be glad to be corrected. If
+none exists, I would be interested to know whether that is regarded as a
 deficiency or as an accepted characteristic of the present arrangements.
 
 Yours faithfully,
@@ -201,7 +201,7 @@ same rules in JavaScript with no network component, and the two are checked
 against one another automatically.
 
 Regarding earlier distributed ledger initiatives in this sector — TradeLens,
-we.trade, Contour and others — our reading is that these failed for reasons of
+we.trade, Contour and others — my reading is that these failed for reasons of
 governance rather than technology. TradeLens carried a substantial share of
-global container traffic and was nonetheless discontinued. We do not propose an
+global container traffic and was nonetheless discontinued. I do not propose an
 intermediary and do not consider one necessary.
