@@ -33,15 +33,26 @@ encounter.
 
 ## 1. Background
 
-In April 2024 the FAA removed Transonic Aviation Consultants from the list of
-accreditation organizations under the Voluntary Industry Distributor
-Accreditation Program, AC 00-56B having been amended by Change 1 to remove the
-TAC-2000 standard. Transonic had previously accredited AOG Technics.
+On April 23, 2024 the FAA announced the removal of Transonic Aviation
+Consultants from the list of accreditation organizations under the Voluntary
+Industry Distributor Accreditation Program, AC 00-56B having been amended by
+Change 1 to remove the TAC-2000 standard. Transonic had previously accredited
+AOG Technics.
 
-Certificates issued by distributors holding a Transonic-granted accreditation
-were, so far as the accreditation was concerned, properly issued at the time. The
-accreditation no longer stands. I am not aware of any mechanism that connects
-those two facts, or that identifies the affected documents.
+The Coalition's report records that the removal followed the FAA's observation of
+two audits conducted by Transonic in January 2024, and that in an Information for
+Operators notice the FAA stated that "processes and procedures described in
+AC 00-56B were not followed in their entirety and determined that Transonic was
+not in compliance with the program" (page 25).
+
+The deficiency was therefore in the accrediting body rather than in any
+individual distributor. Certificates issued by distributors holding a
+Transonic-granted accreditation were, so far as the accreditation was concerned,
+properly issued at the time. The accreditation no longer stands, and the basis on
+which it was granted has been found wanting.
+
+I am not aware of any mechanism that connects those facts, or that identifies the
+affected documents.
 
 ## 2. The general case
 
