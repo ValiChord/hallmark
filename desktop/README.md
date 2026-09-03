@@ -70,7 +70,7 @@ Because there is no signature to check, verify the file by its hash instead. The
 value is published with each release:
 
 ```powershell
-Get-FileHash .\uk.valichord.hallmark-0.1.1-setup.exe -Algorithm SHA256
+Get-FileHash .\uk.valichord.hallmark-0.1.2-setup.exe -Algorithm SHA256
 ```
 
 Antivirus software may object separately, with its own dialog and its own
@@ -139,7 +139,7 @@ Two traps that come from Kangaroo's defaults and are fixed here, but which will
 catch you if you use a stock template elsewhere:
 
 - Kangaroo derives the seed from the product name and version, and at `0.0.z`
-  **every patch bump is a new network**. The version is `0.1.0` for that reason:
+  **every patch bump is a new network**. The version is `0.1.z` for that reason:
   at `0.1.z` the data directory and seed are stable across patches.
 - Kangaroo appends `-dev` to the seed for unpackaged builds, so `npm run dev`
   could not see a packaged build. Hallmark states the seed explicitly instead,
@@ -221,6 +221,22 @@ passphrase — appropriate for a demonstration, not for production keys.
 ## Honest limits
 
 - **Not code-signed.** Windows SmartScreen and macOS Gatekeeper will complain.
+- **Antivirus may block it outright, which is worse than SmartScreen.** Observed
+  on this machine 2026-09-03: Norton 360 refused to launch the installer with
+  *"Windows cannot access the specified device, path or file. You may not have
+  the appropriate permissions to access the item."* — a dialog whose only button
+  is **OK**. Unlike SmartScreen there is no visible way forward, so a first-time
+  viewer concludes the software is broken.
+
+  The file was intact when this happened: size and SHA256 matched the published
+  release exactly, it was readable, it carried a valid executable header, and it
+  had no mark-of-the-web. Norton's Download Insight blocks files it considers
+  unproven, and a new unsigned installer with almost no users worldwide is
+  exactly that. Allow it from Norton's Security History, or add an exclusion
+  under Settings → Antivirus → Scans and Risks → Exclusions.
+
+  **Assume this will happen to some people you send it to**, and more often
+  inside a company than on a home machine. Lead with the browser demo.
 - **The bootstrap and relay servers are Holochain's public dev infrastructure**
   (`dev-test-bootstrap2.holochain.org`, set in `kangaroo.config.ts`). Peers use
   them to find each other. They cannot read or alter records — validation

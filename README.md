@@ -27,13 +27,16 @@ where the enforcement actually lives. Rust, on Holochain. What a record must
 contain, who may sign it, and when a revocation is accepted. About 900 lines, and
 the surrounding [`demo/zomes/`](demo/zomes/) has a build guide.
 
-**[Download the desktop app for Windows](https://github.com/ValiChord/hallmark/releases/download/desktop-v0.1.1/uk.valichord.hallmark-0.1.1-setup.exe)**
+**[Download the desktop app for Windows](https://github.com/ValiChord/hallmark/releases/download/desktop-v0.1.2/uk.valichord.hallmark-0.1.2-setup.exe)**
 — downloads immediately, 120 MB. A real peer-to-peer node with its own key. Two
 machines verify each other's records without either contacting the other.
 
 Not code-signed, so Windows warns on first run: click **More info**, then **Run
-anyway**. The checksum to verify it against is in the
-[release notes](https://github.com/ValiChord/hallmark/releases/tag/desktop-v0.1.1),
+anyway**. Some antivirus software blocks it outright instead, with a dialog
+offering only **OK** — if that happens, allow the file from the antivirus's own
+history screen, or just use the browser demo above, which needs no install and
+shows the same rules. The checksum to verify it against is in the
+[release notes](https://github.com/ValiChord/hallmark/releases/tag/desktop-v0.1.2),
 and the two-device walkthrough is in [desktop/README.md](desktop/README.md).
 macOS and Linux are configured but unbuilt — see
 [desktop/README.md](desktop/README.md) to build them.
