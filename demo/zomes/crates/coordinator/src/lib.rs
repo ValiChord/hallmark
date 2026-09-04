@@ -310,15 +310,23 @@ fn records_from_links(base: impl Into<AnyLinkableHash>, link_type: LinkTypes) ->
     let links = get_links(
         LinkQuery::try_new(base, link_type)?, GetStrategy::default(),
     )?;
-    let mut out = Vec::new();
-    for link in links {
-        if let Some(target) = link.target.into_action_hash() {
-            if let Some(record) = get(target, GetOptions::default())? {
-                out.push(record);
-            }
-        }
+    // One batched get, not one per link. `hdk::prelude::get` is a convenience
+    // wrapper that puts a single GetInput in a vec and unwraps the first result;
+    // the host function underneath takes the whole vec. Called in a loop it pays
+    // a network round trip per link, which is what this used to do.
+    let targets: Vec<GetInput> = links
+        .into_iter()
+        .filter_map(|l| l.target.into_action_hash())
+        .map(|h| GetInput::new(h.into(), GetOptions::default()))
+        .collect();
+    if targets.is_empty() {
+        return Ok(Vec::new());
     }
-    Ok(out)
+    let records = HDK.with(|hdk| hdk.borrow().get(targets))?;
+    // Unresolved targets stay dropped, exactly as before. These are read paths
+    // for listing records, not the trust decision — `revocations_of` in verify.rs
+    // is where a missing record has to be noticed rather than skipped.
+    Ok(records.into_iter().flatten().collect())
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

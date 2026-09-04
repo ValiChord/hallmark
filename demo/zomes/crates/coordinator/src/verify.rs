@@ -143,14 +143,36 @@ fn revocations_of(membership_hash: &ActionHash) -> RevocationLookup {
 
     match links_to(membership_hash.clone(), LinkTypes::MembershipToRevocation) {
         Err(_) => incomplete = true,
+        Ok(hashes) if hashes.is_empty() => {}
         Ok(hashes) => {
-            for hash in hashes {
-                match get(hash, GetOptions::default()) {
-                    Err(_) | Ok(None) => incomplete = true,
-                    Ok(Some(record)) => {
-                        match record.entry().to_app_option::<MembershipRevocation>() {
-                            Ok(Some(rev)) => revocations.push((record.action().timestamp(), rev)),
-                            _ => incomplete = true,
+            // One batched get for every revocation linked to this membership,
+            // rather than a network round trip each. `verify_attestation` calls
+            // this once per hop of the delegation chain, so the sequential
+            // version cost links × depth round trips on the single lookup the
+            // whole trust decision rests on.
+            //
+            // The batch returns Vec<Option<Record>> in request order, so a `None`
+            // still means "this node has the link but not the record" and still
+            // raises `incomplete`. Fail-closed behaviour is unchanged; only the
+            // number of round trips is.
+            let inputs: Vec<GetInput> = hashes
+                .into_iter()
+                .map(|h| GetInput::new(h.into(), GetOptions::default()))
+                .collect();
+            match HDK.with(|hdk| hdk.borrow().get(inputs)) {
+                Err(_) => incomplete = true,
+                Ok(records) => {
+                    for maybe in records {
+                        match maybe {
+                            None => incomplete = true,
+                            Some(record) => {
+                                match record.entry().to_app_option::<MembershipRevocation>() {
+                                    Ok(Some(rev)) => {
+                                        revocations.push((record.action().timestamp(), rev))
+                                    }
+                                    _ => incomplete = true,
+                                }
+                            }
                         }
                     }
                 }
