@@ -19,6 +19,8 @@ pub struct VerificationReport {
     pub membership: MembershipCheck,
     pub predecessor: PredecessorCheck,
     pub revocation: RevocationCheck,
+    /// What this node knows about the attester's own source chain. See ChainCheck.
+    pub chain: ChainCheck,
     pub scope: Vec<ScopeCheck>,
     pub counters: Vec<CounterAttestation>,
     /// Counters never flip this report. They are a social overlay.
@@ -61,6 +63,47 @@ pub enum RevocationCheck {
     /// record did not, or the chain could not be walked. `currently_trusted` is
     /// false whenever this is set.
     Unknown,
+}
+
+/// What this node knows about the attester's own source chain.
+///
+/// Two of these answer questions the rest of the report cannot.
+///
+/// `Unknown` is the **absence-of-knowledge** signal. Every other check in this
+/// report conflates "I looked and it was fine" with "I have not received it
+/// yet". `ChainStatus::Empty` means precisely "this authority has no
+/// information on the chain", so a reader can tell the difference.
+///
+/// `Forked` is the sharper one. It means the agent signed two conflicting
+/// actions at the same sequence number. A repair station forking its chain to
+/// sign two contradictory 8130-3s is the fraud this format exists to catch, and
+/// the DHT already detects it — this report simply never asked.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "kind")]
+pub enum ChainCheck {
+    /// This authority considers the chain valid, and holds no warrant against
+    /// it. The weakest of the good answers: see `Warranted`.
+    Valid,
+    /// Valid, and the agent has closed their chain and will append nothing
+    /// further. Not an error. `Closed` takes precedence over `Valid` in
+    /// Holochain's own ordering, and a relying party may want to know.
+    Closed,
+    /// Two conflicting actions at one sequence number.
+    Forked,
+    /// This authority found a DHT operation for one of the chain's actions
+    /// invalid.
+    Invalid,
+    /// The chain looks valid to this authority, but another authority has
+    /// published a warrant against it. `ChainStatus::Valid` is only ever one
+    /// authority's view — the variant's own documentation says to check
+    /// `warrants` for "a full picture of their validity".
+    Warranted { count: u32 },
+    /// This authority has no information on the chain. Not a finding about the
+    /// attester; a finding about this node.
+    Unknown,
+    /// The query itself failed. Distinguished from `Unknown` so a reader is not
+    /// told the network is silent when the call errored.
+    NotChecked,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -221,6 +264,69 @@ pub fn verify_attestation(attestation_hash: ActionHash) -> ExternResult<Verifica
 
     let mut historically_valid = binding_well_formed && author_matches_attester;
     let mut currently_trusted = binding_well_formed && author_matches_attester;
+
+    // What this node knows about the attester's own chain.
+    //
+    // `Forked` is why this is here. Two conflicting actions at one sequence
+    // number is a repair station signing two contradictory 8130-3s, which is the
+    // fraud this whole format targets. Holochain detects it already; nothing in
+    // this report ever asked.
+    //
+    // Note this only touches `currently_trusted`. A fork discovered today does
+    // not mean the record was improperly authorised when it was signed, and
+    // `historically_valid` is a claim about that moment. Same reasoning as a
+    // revocation dated after the attestation.
+    let chain = match get_agent_activity(
+        attestation.attester.agent_pubkey.clone(),
+        ChainQueryFilter::new(),
+        ActivityRequest::Status,
+        GetOptions::default(),
+    ) {
+        Err(_) => ChainCheck::NotChecked,
+        Ok(activity) => {
+            let warrants = activity.warrants.len() as u32;
+            match activity.status {
+                // A warrant outranks this authority's own opinion: the variant's
+                // documentation says `Valid` is one authority's view and that
+                // `warrants` carries what others found. Checking status alone
+                // gives a false clean bill of health.
+                ChainStatus::Valid(_) if warrants > 0 => ChainCheck::Warranted { count: warrants },
+                ChainStatus::Closed(_) if warrants > 0 => ChainCheck::Warranted { count: warrants },
+                ChainStatus::Valid(_) => ChainCheck::Valid,
+                ChainStatus::Closed(_) => ChainCheck::Closed,
+                ChainStatus::Forked(_) => ChainCheck::Forked,
+                ChainStatus::Invalid(_) => ChainCheck::Invalid,
+                ChainStatus::Empty => ChainCheck::Unknown,
+            }
+        }
+    };
+    match chain {
+        // Findings. Each is this node being told something is wrong, and each
+        // taints new reliance without touching the past — same shape as a
+        // revocation dated after the attestation.
+        ChainCheck::Forked | ChainCheck::Invalid | ChainCheck::Warranted { .. } => {
+            currently_trusted = false
+        }
+        // `Unknown` and `NotChecked` are reported and deliberately do NOT flip
+        // the verdict, which is the opposite of `RevocationCheck::Unknown`.
+        //
+        // The two look alike and are not. A revocation *link* that resolves
+        // while its record does not is evidence that something exists which this
+        // node cannot read — silence where there was known to be sound.
+        // `ChainStatus::Empty` is the ordinary state of any node that is not an
+        // authority for that agent and has not been sent their activity. It is
+        // the common case, not a warning.
+        //
+        // Measured, not assumed: on a single conductor with the root and the
+        // station in separate installs, a wholly legitimate attestation reports
+        // `Empty`. Failing closed here marked every record untrusted, including
+        // in the demonstration. Reporting it and leaving the verdict alone keeps
+        // the distinction visible to a reader without destroying the answer.
+        ChainCheck::Unknown | ChainCheck::NotChecked => {}
+        // `Closed` means the agent will append nothing further. A fact a reader
+        // may want, not a fault.
+        ChainCheck::Valid | ChainCheck::Closed => {}
+    }
 
     // Walked once, used twice: the membership check needs the verdict and the
     // revocation sweep needs the hashes. This used to be two identical walks,
@@ -445,6 +551,7 @@ pub fn verify_attestation(attestation_hash: ActionHash) -> ExternResult<Verifica
         membership,
         predecessor,
         revocation,
+        chain,
         scope,
         counters,
         counters_are_informational: true,

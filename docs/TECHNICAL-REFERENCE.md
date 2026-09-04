@@ -258,6 +258,7 @@ signers. An earlier draft ejected honest issuers for exactly that.
 | `membership` | `Active`, `Expired(at)`, `InvalidProof`, `NotFound`, `ChainBroken` |
 | `predecessor` | `None`, `Ok`, `Missing`, `DifferentPart`, `NotEarlier` |
 | `revocation` | `Clean`, `RevokedBeforeAssertion`, `RevokedAfterAssertion` |
+| `chain` | What this node knows of the attester's own chain: `Valid`, `Closed`, `Forked`, `Invalid`, `Warranted`, `Unknown`, `NotChecked` |
 | `scope` | Each assertion id, and whether it is in the vocabulary |
 | `counters` | Counter-attestations, explicitly informational |
 | `historically_valid` | Was this a real, properly authorised record when it was signed? |
@@ -270,6 +271,30 @@ history.
 
 Verification walks the whole membership chain to a root, checking revocations at every level, with
 cycle detection.
+
+### The chain check, and why `Unknown` does not fail closed
+
+`chain` reports what this node knows of the attester's own source chain, from
+`get_agent_activity`. `Forked` is why it exists: two conflicting actions at one
+sequence number is a station signing two contradictory 8130-3s, which is the
+fraud this format targets. Holochain detects it already; the report never asked.
+
+`Forked`, `Invalid` and `Warranted` set `currently_trusted: false` and leave
+`historically_valid` alone — a fork found today says nothing about whether the
+record was properly authorised when signed.
+
+`Warranted` exists because `ChainStatus::Valid` is only the answering
+authority's opinion. Its own documentation says to read `warrants` for
+"a full picture of their validity", so checking status alone gives a false clean
+bill of health.
+
+**`Unknown` is reported and deliberately does not change the verdict**, which is
+the opposite of `RevocationCheck::Unknown`. The two look alike and are not. A
+revocation link that resolves while its record does not is evidence of something
+this node cannot read. `ChainStatus::Empty` is the ordinary state of any node
+that is not an authority for that agent. Measured on 4 September 2026: a wholly
+legitimate attestation reports `Empty` on a single conductor, and failing closed
+marked every record untrusted — including in the demonstration.
 
 **Counter-attestations never flip `currently_trusted`.** A disagreement is evidence for a reader
 to weigh, not a verdict.
