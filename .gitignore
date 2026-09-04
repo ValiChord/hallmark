@@ -34,3 +34,6 @@ desktop/ui/public/icon.png
 desktop/qr-sample.png
 desktop/build-win.log
 desktop/dist/
+
+# Third-party agent skills, installed not vendored. See docs/HANDOVER.md.
+.claude/skills/

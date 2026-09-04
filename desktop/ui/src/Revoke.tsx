@@ -122,9 +122,10 @@ export function Revoke({
     try {
       const record = await call("revoke_membership", {
         membership_hash: Array.from(parseActionHash(row.hash)),
-        // `{ Administrative: null }`, not the bare string. This is the form
-        // zomes/tests/network-gossip.mjs uses against a real conductor in CI,
-        // and the encoding is the part worth copying rather than deriving.
+        // Both `{ Administrative: null }` and the bare string "Administrative"
+        // are accepted — tested against a real conductor 2026-09-04. This form is
+        // used because zomes/tests/network-gossip.mjs uses it in CI, so the two
+        // stay in step, not because the other one fails.
         grounds: { Administrative: null },
         evidence_hashes: [],
         notes: "Withdrawn by the issuing authority.",

@@ -311,11 +311,29 @@ after revocation    membership=Active  revocation=RevokedAfterAssertion
   properly authorised when signed* — a claim about the past, not about their sync state. This is
   deliberate fail-closed design, but the field's name overstates what it knows. Read
   `membership`/`predecessor` alongside it.
-- **`historically_valid` is judged against today's vocabulary.** An assertion no longer in
-  `assertion_vocabulary` makes the record invalid retroactively. Since the vocabulary is
-  provisional, the first revision will invalidate records that were correct when written — the exact
-  collapse of history into present that §10.1 of the spec calls the most important thing the format
-  gets right. Vocabulary changes therefore need a migration story before the vocabulary is settled.
+- **The vocabulary cannot be changed for the life of a network, and that is worse than the problem
+  this entry used to describe.**
+
+  ⚠️ *Corrected 4 September 2026. This previously said a vocabulary revision would retroactively
+  invalidate records that were correct when written. **That cannot happen**, and the reason is
+  stated elsewhere in our own documents: `modifiers.properties` is part of the DNA hash — see
+  `desktop/README.md`, "Networks, and who the roots are". A changed vocabulary is a changed DNA
+  hash, which is a different network, which contains no existing records. There is no state in
+  which old records are re-judged. `verify_attestation` reads properties from `dna_info()`, which
+  is fixed within a network.*
+
+  The real constraint: **revising the vocabulary means starting a new DHT and abandoning every
+  record in the old one.** There is no migration path — `unstable-migration` gates the manifest's
+  `lineage` field, and Holochain does not verify a claimed lineage is truthful even when it is
+  enabled.
+
+  Two consequences worth stating before any production install:
+
+  1. The vocabulary must be settled *first*. It is not a field that can be revised in service.
+  2. "A different regulator is a different install" — the phrase in `dna.yaml` — also means a
+     permanently separate, non-interoperable DHT per regulator. An FAA network and an EASA network
+     could not verify each other's records at all. That may be correct, but it is a design
+     decision, not an implementation detail.
 - **Neither implementation checks a signature.** In the zome this is a correct delegation —
   Holochain sys-validates the author's signature before the record ever reaches validation, and
   `signature_checked_by_sys` is a constant asserting that, not a check. In the browser engine there
