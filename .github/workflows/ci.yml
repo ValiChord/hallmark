@@ -192,6 +192,12 @@ jobs:
         working-directory: demo
         run: node zomes/tests/revoke-ui-contract.mjs
 
+      # A counter-attestation requires an accreditation. Without the rule, any
+      # agent who can join may Disagree with every record on the network.
+      - name: A counter-attestation requires an accreditation
+        working-directory: demo
+        run: node zomes/tests/counter-requires-accreditation.mjs
+
       - name: Conductor log on failure
         if: failure()
         working-directory: demo/zomes

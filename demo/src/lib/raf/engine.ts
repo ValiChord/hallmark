@@ -303,6 +303,7 @@ export function createCounter(
   }
   const value: CounterAttestation = {
     attestationHash,
+    membershipProofHash: counter.membershipProofHash,
     attester: {
       agentPubkey: author,
       role: counter.role,

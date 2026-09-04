@@ -962,9 +962,20 @@ function VerifyTab({ state, actor }: { state: EngineState; actor?: string }) {
           onSubmit={(e) => {
             e.preventDefault();
             mutate((s) => {
+              // A counter now needs an accreditation, exactly as an attestation
+              // does — otherwise anyone could file a Disagree against every
+              // record on the network. The refusal is worth showing.
               const mem = latestMembership(s, agent.pubkey);
+              if (!mem || mem.entry.type !== "MembershipProof") {
+                return {
+                  ok: false,
+                  reason:
+                    "This party holds no accreditation, so it cannot counter-attest. Issue one first.",
+                };
+              }
               createCounter(s, agent.pubkey, hash, {
-                role: mem?.entry.type === "MembershipProof" ? mem.entry.value.role : "Airline",
+                membershipProofHash: mem.hash,
+                role: mem.entry.value.role,
                 organisation: agent.organisation,
                 organisationId: agent.organisationId,
                 agreement: agree,

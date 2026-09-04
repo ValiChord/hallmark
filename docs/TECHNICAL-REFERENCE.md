@@ -70,7 +70,7 @@ All entries are immutable. Updates and deletes are rejected. Correction is a new
 | `Attestation` | Binds a part to a document, with scope |
 | `MembershipProof` | A time-bounded accreditation, issued by a root or by a delegate |
 | `MembershipRevocation` | Withdraws a membership. A separate Create, never an Update |
-| `CounterAttestation` | Another party's agreement or disagreement. Informational only |
+| `CounterAttestation` | Another party's agreement or disagreement. Informational only, but requires a live accreditation |
 | `KeyHandoff` / `KeyAcceptance` | Two-step key rotation |
 
 ### 4.1 Attestation

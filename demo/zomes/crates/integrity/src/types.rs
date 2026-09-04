@@ -260,6 +260,19 @@ pub struct CounterAttestation {
     /// attestation a competitor ever published.
     pub attestation_hash: ActionHash,
     pub attester: Attester,
+    /// The accreditation the counter-attester relies on, exactly as an
+    /// `Attestation` names one.
+    ///
+    /// Without it any agent who can join the network may author a `Disagree`
+    /// against every attestation in the DHT, and every authority stores,
+    /// validates and gossips each one indefinitely. Counters never flip
+    /// `currently_trusted` — that is true and does not help, because the cost is
+    /// storage, gossip and reader noise from an unbounded population.
+    ///
+    /// Any live accreditation qualifies. The role is deliberately not
+    /// constrained: SPEC.md §5.1 expects a counter from the receiving party, who
+    /// may be a buyer rather than a repair station.
+    pub membership_proof_hash: ActionHash,
     pub agreement: AgreementStatus,
     pub discrepancy_notes: Option<String>,
 }

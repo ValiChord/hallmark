@@ -141,6 +141,9 @@ pub fn create_attestation(attestation: Attestation) -> ExternResult<Record> {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CreateCounterInput {
     pub attestation_hash: ActionHash,
+    /// The accreditation the counter-attester relies on. Required: validation
+    /// refuses a counter from an agent holding none. See CounterAttestation.
+    pub membership_proof_hash: ActionHash,
     pub role: AttesterRole,
     pub organisation: String,
     pub organisation_id: String,
@@ -166,6 +169,7 @@ pub fn create_counter_attestation(input: CreateCounterInput) -> ExternResult<Rec
             organisation: input.organisation,
             organisation_id: input.organisation_id,
         },
+        membership_proof_hash: input.membership_proof_hash,
         agreement: input.agreement,
         discrepancy_notes: input.notes,
     };

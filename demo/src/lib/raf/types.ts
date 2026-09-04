@@ -205,6 +205,14 @@ export type CounterAttestation = {
   /** The attestation this counters. Named in the entry, not just the link. */
   attestationHash: string;
   attester: Attester;
+  /**
+   * The accreditation the counter-attester relies on, exactly as an Attestation
+   * names one. Without it any agent may author a Disagree against every
+   * attestation in the DHT and every authority stores and gossips it forever.
+   * Any live accreditation qualifies; the role is deliberately unconstrained,
+   * because SPEC.md §5.1 expects a counter from the receiving party.
+   */
+  membershipProofHash: string;
   agreement: AgreementStatus;
   discrepancyNotes?: string;
 };

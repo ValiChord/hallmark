@@ -836,6 +836,40 @@ fn validate_counter(
     if let Err(inv) = require_app_entry::<Attestation>(&target)? {
         return Ok(inv);
     }
+
+    // The counter-attester must hold a live accreditation, for the same reason an
+    // attester must. Without this any agent who can join may author a Disagree
+    // against every attestation in the DHT, and every authority stores and
+    // gossips each one forever. That counters never flip `currently_trusted` does
+    // not bound the cost.
+    //
+    // The role is deliberately NOT checked against anything. SPEC.md §5.1 expects
+    // a counter from the receiving party, who may be a buyer rather than a repair
+    // station, so any live accreditation qualifies. This bounds the population to
+    // parties with something to lose, and no more than that.
+    let at = action.timestamp();
+    let membership_record = must_get_valid_record(counter.membership_proof_hash.clone())?;
+    let membership = match require_app_entry::<MembershipProof>(&membership_record)? {
+        Ok(p) => p,
+        Err(inv) => return Ok(inv),
+    };
+    if membership.agent_pubkey != counter.attester.agent_pubkey {
+        return invalid("membership belongs to a different agent");
+    }
+    if membership.role != counter.attester.role {
+        return invalid("counter-attester role does not match membership role");
+    }
+    if membership.organisation != counter.attester.organisation
+        || membership.organisation_id != counter.attester.organisation_id
+    {
+        return invalid("counter-attester organisation does not match membership");
+    }
+    if at < membership_record.action().timestamp() {
+        return invalid("membership issued after this counter-attestation");
+    }
+    if at > membership.expires_at {
+        return invalid("membership expired");
+    }
     valid()
 }
 

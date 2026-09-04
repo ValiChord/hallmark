@@ -213,6 +213,21 @@ A counter-attestation **MUST NOT** be required for the original to verify — re
 present breaks the N=2 case in exactly the conditions this format exists for — and **MUST NOT**
 alter the original's trust status. It is evidence for a reader to weigh, not a verdict.
 
+A counter-attestation **MUST** reference an accreditation, under the same rules as §6: live at the
+time of signing, belonging to the counter-attester, and matching their declared role and
+organisation.
+
+**Its accreditation type is deliberately unconstrained.** The receiving party is often a buyer
+rather than a repair station, so requiring a maintenance approval would exclude exactly the party
+§5.1 exists to hear from. Any live accreditation qualifies.
+
+> **Why the rule is needed at all**, since a counter changes no verdict. Without it, any party able
+> to join can record a disagreement against every attestation in existence, and every peer stores
+> and relays each one indefinitely. That counters never alter `currently_trusted` bounds their
+> *authority*, not their *cost*. Requiring an accreditation limits the population to parties with
+> something to lose, and does nothing else — an accredited party may still disagree as freely as
+> before.
+
 ---
 
 ## 6. Membership is a time-bounded capability

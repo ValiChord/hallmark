@@ -58,7 +58,7 @@ export function validateCreate(entry: Entry, action: ActionCtx, lookup: Lookup):
     case "KeyAcceptance":
       return validateAcceptance(entry.value, action, lookup);
     case "CounterAttestation":
-      return validateCounter(entry.value, action);
+      return validateCounter(entry.value, action, lookup);
   }
 }
 
@@ -501,11 +501,36 @@ function validateAcceptance(
   return ok;
 }
 
-function validateCounter(counter: CounterAttestation, action: ActionCtx): Verdict {
+function validateCounter(
+  counter: CounterAttestation,
+  action: ActionCtx,
+  lookup: Lookup,
+): Verdict {
   if (action.author !== counter.attester.agentPubkey) {
     return bad("author is not the counter-attester");
   }
   if (!counter.attester.organisation.trim()) return bad("organisation is required");
+
+  const mRec = lookup.get(counter.membershipProofHash);
+  const membership = requireEntry<MembershipProof>(mRec, "MembershipProof");
+  if (!membership.ok) return membership;
+  if (!mRec) return bad("membership missing");
+  if (membership.value.agentPubkey !== counter.attester.agentPubkey) {
+    return bad("membership belongs to a different agent");
+  }
+  if (membership.value.role !== counter.attester.role) {
+    return bad("counter-attester role does not match membership role");
+  }
+  if (
+    membership.value.organisation !== counter.attester.organisation ||
+    membership.value.organisationId !== counter.attester.organisationId
+  ) {
+    return bad("counter-attester organisation does not match membership");
+  }
+  if (action.timestamp < mRec.timestamp) {
+    return bad("membership issued after this counter-attestation");
+  }
+  if (action.timestamp > membership.value.expiresAt) return bad("membership expired");
   return ok;
 }
 
