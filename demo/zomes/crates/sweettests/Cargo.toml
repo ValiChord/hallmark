@@ -21,11 +21,14 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+# Versions are pinned literally, not inherited. This crate is deliberately
+# EXCLUDED from the workspace (see ../../Cargo.toml), so `workspace = true` has no
+# root to inherit from and cargo fails to parse the manifest before it compiles
+# anything.
+#
+# Only what the harness actually uses. holochain::prelude re-exports the types
+# the test names, so hdk, holo_hash and the integrity crate are not needed here.
 [dev-dependencies]
 holochain = { version = "=0.7.0", default-features = false, features = ["sweettest"] }
-holochain_types = "=0.7.0"
-holo_hash = "=0.7.0"
-hdk = { workspace = true }
-aviation_attestation_integrity = { path = "../integrity" }
 tokio = { version = "1", features = ["full"] }
 serde_json = "1"
