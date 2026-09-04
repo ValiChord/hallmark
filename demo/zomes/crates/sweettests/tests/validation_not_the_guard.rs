@@ -19,10 +19,10 @@
 //!  * `update_coordinators` hot-swaps the coordinator zome, so the guard can be
 //!    removed and the integrity rule tested on its own.
 //!
-//! This file starts with the first, which needs no second wasm build.
+//! This file does the first, which needs no second wasm build.
 
-use holochain::sweettest::*;
 use holochain::prelude::*;
+use holochain::sweettest::*;
 use std::path::PathBuf;
 
 fn happ_path() -> PathBuf {
@@ -32,21 +32,29 @@ fn happ_path() -> PathBuf {
         .join("aviation_provenance.happ")
 }
 
-/// DNA properties, matching what the Node tests install with. `genesis_self_check`
-/// refuses an empty `initial_members`, so these cannot be defaulted.
-fn properties(root: &AgentPubKey) -> SerializedBytes {
-    let json = serde_json::json!({
-        "initial_members": [root.to_string()],
-        "max_delegation_depth": 2,
-        "max_membership_ttl_micros": 31_536_000_000_000u64,
-        "airworthiness_vocabulary": ["NEW", "PROTOTYPE", "USED"],
-        "return_to_service_vocabulary": ["OVERHAULED", "REPAIRED", "INSPECTED", "TESTED", "MODIFIED"],
-    });
-    SerializedBytes::try_from(json).expect("properties serialise")
+/// DNA properties, matching what the Node tests install with.
+/// `genesis_self_check` refuses an empty `initial_members`, so these cannot be
+/// defaulted away.
+///
+/// `with_properties` takes `YamlProperties`, which wraps a `yaml_serde::Value`.
+/// Not `SerializedBytes` — that was the first guess and it does not implement
+/// `TryFrom<serde_json::Value>`.
+fn properties(root: &AgentPubKey) -> YamlProperties {
+    let yaml = format!(
+        concat!(
+            "initial_members: [\"{}\"]\n",
+            "max_delegation_depth: 2\n",
+            "max_membership_ttl_micros: 31536000000000\n",
+            "airworthiness_vocabulary: [NEW, PROTOTYPE, USED]\n",
+            "return_to_service_vocabulary: [OVERHAULED, REPAIRED, INSPECTED, TESTED, MODIFIED]\n",
+        ),
+        root
+    );
+    YamlProperties::new(yaml_serde::from_str(&yaml).expect("properties are valid YAML"))
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_non_root_issuance_is_refused_and_nothing_invalid_is_integrated() {
+async fn nothing_invalid_is_integrated_when_a_bad_membership_is_refused() {
     let mut conductor = SweetConductor::create_with_defaults(
         SweetConductorConfig::standard(),
         None,
@@ -71,28 +79,30 @@ async fn a_non_root_issuance_is_refused_and_nothing_invalid_is_integrated() {
     let app = conductor
         .setup_app_for_agent("hallmark", root.clone(), [&dna])
         .await
-        .expect("app installs — if this fails on initial_members, the override did not apply");
+        .expect("app installs — a failure here means the properties override did not apply");
 
     let cell = app.cells()[0].clone();
 
-    // The guard path: a root issuing to itself is refused for self-issuance, so
-    // this asserts the call fails without asserting *where* it failed.
-    let issue: Result<Record, _> = conductor
+    // Self-issuance. `validate_membership` refuses it regardless of any
+    // coordinator, so the call must fail.
+    let issued: Result<Record, _> = conductor
         .call_fallible(
             &cell.zome("aviation_attestation_coordinator"),
             "issue_membership",
             self_issued_proof(&root),
         )
         .await;
-    assert!(issue.is_err(), "self-issuance must be refused");
+    assert!(issued.is_err(), "self-issuance must be refused");
 
-    // The claim that matters: nothing invalid reached the DHT. If a refusal had
-    // come only from the coordinator, this would also be empty — so on its own
-    // it proves the negative, not the positive. It is the regression guard for
-    // the case where a future change lets a bad op through while the call still
-    // appears to fail.
+    // The claim worth pinning: nothing invalid reached the DHT.
+    //
+    // Read this honestly. On its own it does not prove validation did the
+    // refusing — a coordinator guard would leave this empty too. It is the
+    // regression guard for the case where a future change lets a bad op through
+    // while the call still appears to fail. Proving the positive needs
+    // `update_coordinators` and a guard-stripped coordinator wasm; see README.
     let invalid = conductor
-        .get_invalid_integrated_ops(&cell.dna_hash())
+        .get_invalid_integrated_ops(cell.dna_hash())
         .await
         .expect("can read invalid ops");
     assert!(
@@ -101,8 +111,7 @@ async fn a_non_root_issuance_is_refused_and_nothing_invalid_is_integrated() {
     );
 }
 
-/// A membership an agent tries to issue to itself, which `validate_membership`
-/// refuses regardless of what any coordinator does.
+/// A membership an agent tries to issue to itself.
 fn self_issued_proof(agent: &AgentPubKey) -> ExternIO {
     let payload = serde_json::json!({
         "agent_pubkey": agent,

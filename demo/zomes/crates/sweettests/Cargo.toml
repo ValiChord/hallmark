@@ -34,4 +34,7 @@ publish = false
 # then refuses to compile with "requires enabling at least one backend feature".
 holochain = { version = "=0.7.0", features = ["sweettest"] }
 tokio = { version = "1", features = ["full"] }
+# DnaModifiersOpt::with_properties takes YamlProperties, which wraps a
+# yaml_serde::Value. Same crate and major version holochain_zome_types uses.
+yaml_serde = "0.10"
 serde_json = "1"
