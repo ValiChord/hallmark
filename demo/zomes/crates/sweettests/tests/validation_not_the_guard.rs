@@ -55,10 +55,14 @@ fn properties(root: &AgentPubKey) -> YamlProperties {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn nothing_invalid_is_integrated_when_a_bad_membership_is_refused() {
+    // The rendezvous argument is not optional with a standard config, despite
+    // its type. SweetConductorConfig::standard() names a bootstrap service, and
+    // passing None panics with "Must use rendezvous SweetConductor if
+    // rendezvous: is specified in config.network.bootstrap_service".
     let mut conductor = SweetConductor::create_with_defaults(
         SweetConductorConfig::standard(),
         None,
-        None::<DynSweetRendezvous>,
+        Some(SweetLocalRendezvous::new().await),
     )
     .await;
 
