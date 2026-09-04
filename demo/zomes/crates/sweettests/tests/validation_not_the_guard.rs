@@ -25,11 +25,17 @@ use holochain::prelude::*;
 use holochain::sweettest::*;
 use std::path::PathBuf;
 
-fn happ_path() -> PathBuf {
+/// The **DNA** bundle, not the hApp.
+///
+/// SweetDnaFile::from_bundle_with_overrides parses Bundle<ValidatedDnaManifest>.
+/// Handing it aviation_provenance.happ fails with "unknown field `description`,
+/// expected one of `name`, `integrity`, `coordinator`" — description being a
+/// legitimate field of the app manifest that the DNA manifest does not have.
+fn dna_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join("aviation_provenance.happ")
+        .join("aviation_provenance.dna")
 }
 
 /// DNA properties, matching what the Node tests install with.
@@ -67,10 +73,10 @@ async fn nothing_invalid_is_integrated_when_a_bad_membership_is_refused() {
     .await;
 
     let root = SweetAgents::one(conductor.keystore()).await;
-    let bundle = happ_path();
+    let bundle = dna_path();
     assert!(
         bundle.exists(),
-        "pack the hApp first: cd demo/zomes && hc dna pack . && hc app pack ."
+        "pack the DNA first: cd demo/zomes && hc dna pack ."
     );
 
     let dna = SweetDnaFile::from_bundle_with_overrides(
