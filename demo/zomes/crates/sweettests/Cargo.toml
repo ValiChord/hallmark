@@ -1,0 +1,31 @@
+# Native (non-wasm) integration tests driven by Holochain's Sweettest harness.
+#
+# A separate workspace member on purpose. The zome crates are `cdylib` built for
+# wasm32-unknown-unknown; this one is a normal host crate and must never be
+# built for that target. It has no library of its own — everything lives under
+# `tests/`.
+#
+# What this buys that the Node tests in ../../tests cannot:
+#
+#  * `get_invalid_integrated_ops` shows whether VALIDATION rejected something, or
+#    whether a coordinator guard did. A zome call cannot tell those apart, and the
+#    threat model here is explicitly a modified client, so the difference is the
+#    whole claim.
+#  * `update_coordinators` hot-swaps a coordinator zome, which is how you
+#    simulate that modified client.
+#  * `get_agent_source_chain` inspects a chain directly, which is what a key
+#    rotation test needs.
+[package]
+name = "hallmark_sweettests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+holochain = { version = "=0.7.0", default-features = false, features = ["sweettest"] }
+holochain_types = "=0.7.0"
+holo_hash = "=0.7.0"
+hdk = { workspace = true }
+aviation_attestation_integrity = { path = "../integrity" }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"

@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
 members = ["crates/integrity", "crates/coordinator"]
+# Native Sweettest harness. NOT a workspace member: it pulls the whole conductor,
+# which needs NASM and a Windows perl that this machine does not have. See
+# crates/sweettests/README.md before enabling it.
+exclude = ["crates/sweettests"]
 
 [workspace.dependencies]
 hdi = "=0.8.0"
