@@ -288,6 +288,24 @@ fn validate_attestation(
     if let Some(inv) = too_many("observed", attestation.scope.observed.len(), MAX_ASSERTIONS) { return inv; }
     if let Some(inv) = too_many("not_observed", attestation.scope.not_observed.len(), MAX_ASSERTIONS) { return inv; }
 
+    // `anchor` is specified in SPEC.md §8 and is NOT implemented. Nothing signs
+    // one, nothing checks one, and `verify_attestation` does not report one.
+    //
+    // Until that changes it must be refused, not merely bounded. A field named
+    // `qualified_timestamp` that any author may fill with anything, that no rule
+    // examines, and that a reader could reasonably believe carries weight, is the
+    // precise failure `scope`/`not_observed` exists to prevent — an unstated
+    // claim taken for a stated one — sitting in the same struct.
+    //
+    // Accepting it silently was the bug. Refusing it keeps the type in place for
+    // when §8 is built, while making it impossible to rely on in the meantime.
+    if attestation.anchor.is_some() {
+        return invalid(
+            "anchor is specified but not implemented: no qualified timestamp is issued, \
+             verified or reported, so a record must not carry one",
+        );
+    }
+
     for ev in &attestation.evidence {
         if ev.evidence_type.trim().is_empty() || ev.digest.trim().len() < 16 {
             return invalid("evidence type and digest are required");
