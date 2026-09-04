@@ -1,8 +1,14 @@
-# Sweettest harness — written, not yet runnable here
+# Sweettest harness — runs in CI, not on Windows
 
-**Status: excluded from the workspace.** It does not compile on the development
-machine, for reasons that have nothing to do with this code. Attempted
-4 September 2026.
+**Status: excluded from the workspace, run by the `sweettest` job in CI.** It does
+not compile on the Windows development machine, for reasons that have nothing to
+do with this code. The job installs the two missing pieces with `apt-get` and
+runs it on `ubuntu-latest`, where they are ordinary.
+
+So it is verified — just not locally. Anyone on Windows should expect
+`cargo test --manifest-path crates/sweettests/Cargo.toml` to fail on
+`aws-lc-sys` or `openssl-sys` and should read the table below before trying to
+fix it.
 
 ## Why it exists
 
@@ -61,15 +67,13 @@ without ceremony.
 1. **Install NASM and Strawberry Perl** on the development machine. Smallest
    change; both are ordinary installers. Strawberry Perl must come *before* Git
    Bash's perl on PATH or `openssl-sys` will pick the wrong one again.
-2. **Run it in CI only**, on `ubuntu-latest`, where both build without help. Add
-   `crates/sweettests` back to the workspace and give it its own job. Costs a
-   long compile on every push unless cached, and cannot be verified locally
-   first.
+2. ~~**Run it in CI only**~~ — **this is what happens now.** The `sweettest` job
+   installs `nasm` and `libssl-dev` and runs it on `ubuntu-latest`, with its own
+   `rust-cache` key so the conductor build is not recompiled every push.
 3. **Run it under WSL.**
 
-Until one of those happens, this directory is excluded from the workspace so it
-cannot break `cargo check --workspace`, and `validation_not_the_guard.rs` is a
-draft that has never been executed. **Do not treat it as passing.**
+The directory stays excluded from the workspace so it cannot break
+`cargo check --workspace`, which is a wasm build and shares nothing with it.
 
 ## What was verified before the build failed
 
