@@ -29,6 +29,9 @@ publish = false
 # Only what the harness actually uses. holochain::prelude re-exports the types
 # the test names, so hdk, holo_hash and the integrity crate are not needed here.
 [dev-dependencies]
-holochain = { version = "=0.7.0", default-features = false, features = ["sweettest"] }
+# Defaults stay ON. holochain 0.7.0's default features are encryption, schema
+# and wasmer-sys-cranelift; turning them off drops the wasm engine and wasmer
+# then refuses to compile with "requires enabling at least one backend feature".
+holochain = { version = "=0.7.0", features = ["sweettest"] }
 tokio = { version = "1", features = ["full"] }
 serde_json = "1"
